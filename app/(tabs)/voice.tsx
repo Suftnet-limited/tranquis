@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Platform, TouchableOpacity, ScrollView, StyleSheet, Animated } from 'react-native'
+import { Platform, TouchableOpacity, ScrollView, StyleSheet, Animated, ActivityIndicator } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
 import { StyledPage, Stack, toastService } from 'fluent-styles'
@@ -10,7 +10,7 @@ import { Text } from '../../src/components/Text'
 import { useColors, useIsDark } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { translateService, type TranslationResult } from '../../src/services/api'
-import { playTTS } from '../../src/hooks'
+import { useTTS } from '../../src/hooks'
 
 type TranscriptLine = {
   id:          string
@@ -19,6 +19,9 @@ type TranscriptLine = {
   translated?: string
   translation?: TranslationResult
 }
+
+const BAR_COUNT  = 20
+const BAR_REST   = 6
 
 export default function VoiceScreen() {
   const C      = useColors()
@@ -29,6 +32,37 @@ export default function VoiceScreen() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [processing, setProcessing] = useState(false)
   const recordingRef = useRef<Audio.Recording | null>(null)
+  const { speak, loading: ttsLoading } = useTTS()
+
+  // Waveform bars jump to new heights every 300ms while listening
+  const barHeights = useRef(Array.from({ length: BAR_COUNT }, () => new Animated.Value(BAR_REST))).current
+  // "Listening…" dot blinks; the interim bubble's dots cycle
+  const dotOpacity = useRef(new Animated.Value(1)).current
+  const [dots, setDots] = useState(1)
+
+  useEffect(() => {
+    if (!listening) {
+      barHeights.forEach((b) => Animated.timing(b, { toValue: BAR_REST, duration: 200, useNativeDriver: false }).start())
+      return
+    }
+    const interval = setInterval(() => {
+      barHeights.forEach((b) => {
+        Animated.timing(b, { toValue: Math.random() * 36 + 8, duration: 150, useNativeDriver: false }).start()
+      })
+    }, 300)
+    return () => clearInterval(interval)
+  }, [listening])
+
+  useEffect(() => {
+    if (!listening) { dotOpacity.setValue(1); setDots(1); return }
+    const blink = Animated.loop(Animated.sequence([
+      Animated.timing(dotOpacity, { toValue: 0.15, duration: 300, useNativeDriver: true }),
+      Animated.timing(dotOpacity, { toValue: 1,    duration: 300, useNativeDriver: true }),
+    ]))
+    blink.start()
+    const interval = setInterval(() => setDots((d) => (d % 3) + 1), 400)
+    return () => { blink.stop(); clearInterval(interval) }
+  }, [listening])
 
   // Pulsing animation
   const pulse = useRef(new Animated.Value(1)).current
@@ -116,7 +150,7 @@ export default function VoiceScreen() {
   const handleListen = () => {
     const last = transcript[transcript.length - 1]
     if (!last?.translated) return
-    playTTS(last.translated, last.translation?.target_lang ?? targetLang)
+    speak(last.translated, last.translation?.target_lang ?? targetLang)
   }
 
   const handleSaveLast = async () => {
@@ -173,13 +207,13 @@ export default function VoiceScreen() {
         <Stack horizontal gap={3} alignItems="flex-end" justifyContent="center"
           height={48} marginBottom={24}
         >
-          {[14, 24, 18, 34, 22, 40, 16, 30, 44, 20, 36, 26, 42, 18, 28, 32, 20, 38, 16, 44].map((h, i) => {
+          {barHeights.map((height, i) => {
             const active = listening && i % 3 !== 1
             return (
-              <Stack
+              <Animated.View
                 key={i}
-                width={4} height={listening ? h : 6} borderRadius={3}
                 style={{
+                  width: 4, height, borderRadius: 3,
                   backgroundColor: active ? C.primary : C.bgMuted,
                   opacity: active ? 1 : 0.45,
                 }}
@@ -222,16 +256,43 @@ export default function VoiceScreen() {
 
         {/* Status label */}
         <Stack alignItems="center" marginBottom={28}>
-          <Text variant="body" color={listening || processing ? C.primary : C.textSecondary} fontWeight="700">
-            {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap mic to start'}
-          </Text>
+          <Stack horizontal alignItems="center" gap={8}>
+            {listening && (
+              <Animated.View style={[styles.liveDot, { opacity: dotOpacity }]} />
+            )}
+            <Text variant="body" color={listening || processing ? C.primary : C.textSecondary} fontWeight="700">
+              {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap mic to start'}
+            </Text>
+          </Stack>
           <Text variant="caption" color={C.textMuted} style={{ marginTop: 4 }}>
             {sourceLang.toUpperCase()} → {targetLang.toUpperCase()}
           </Text>
         </Stack>
 
+        {/* Interim bubble while recording and translating — replaced by the result */}
+        {(listening || processing) && (
+          <Stack
+            backgroundColor={`${C.primary}20`} borderRadius={16} padding={14} marginBottom={16}
+            style={{ borderWidth: 1, borderColor: `${C.primary}35` }}
+          >
+            <Text variant="caption" color={C.primary} fontWeight="700"
+              style={{ letterSpacing: 0.8, marginBottom: 6 }}
+            >
+              {listening ? `LISTENING${'.'.repeat(dots)}` : 'TRANSLATING…'}
+            </Text>
+            {listening ? (
+              <Text variant="body" color={C.textSecondary}>Speak now… tap stop when done</Text>
+            ) : (
+              <Stack horizontal alignItems="center" gap={8}>
+                <ActivityIndicator size="small" color={C.primary} />
+                <Text variant="body" color={C.textSecondary}>Working out what you said</Text>
+              </Stack>
+            )}
+          </Stack>
+        )}
+
         {/* YOU SAID bubble */}
-        {lastLine && (
+        {lastLine && !listening && !processing && (
           <Stack gap={12} marginBottom={16}>
             <Stack
               backgroundColor={`${C.primary}20`}
@@ -304,10 +365,12 @@ export default function VoiceScreen() {
         </TouchableOpacity>
 
         {/* Listen */}
-        <TouchableOpacity onPress={handleListen} activeOpacity={0.7}
-          style={[styles.bottomBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
+        <TouchableOpacity onPress={handleListen} activeOpacity={0.7} disabled={ttsLoading}
+          style={[styles.bottomBtn, { backgroundColor: C.bgCard, borderColor: C.border, opacity: ttsLoading ? 0.6 : 1 }]}
         >
-          <Text style={{ fontSize: 20 }}>🔊</Text>
+          {ttsLoading
+            ? <ActivityIndicator size="small" color={C.primary} />
+            : <Text style={{ fontSize: 20 }}>🔊</Text>}
         </TouchableOpacity>
       </Stack>
     </StyledPage>
@@ -315,6 +378,10 @@ export default function VoiceScreen() {
 }
 
 const styles = StyleSheet.create({
+  liveDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
   clearBtn: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, paddingVertical: 7,

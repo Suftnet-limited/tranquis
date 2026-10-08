@@ -7,7 +7,7 @@ import { StyledPage, Stack, toastService } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
 import { useColors, useIsDark } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
-import { useTranslate, playTTS } from '../../src/hooks'
+import { useTranslate, useTTS } from '../../src/hooks'
 
 type Mode = 'gallery' | 'capture' | 'live'
 
@@ -16,8 +16,12 @@ export default function CameraScreen() {
   const isDark = useIsDark()
   const { targetLang } = useTranslatorStore()
   const { translateImage, saveToPhrasebook, loading, result, clear } = useTranslate()
+  const { speak, loading: ttsLoading } = useTTS()
 
   const [imageUri,  setImageUri]  = useState<string | null>(null)
+  // Kept so a failed translation can be retried without picking the photo again
+  const [base64,    setBase64]    = useState<string | null>(null)
+  const [mimeType,  setMimeType]  = useState('image/jpeg')
   const [liveMode,  setLiveMode]  = useState(false)
   const [activeMode, setActiveMode] = useState<Mode>('capture')
 
@@ -26,7 +30,15 @@ export default function CameraScreen() {
     const asset = res.assets[0]
     clear()
     setImageUri(asset.uri)
+    setBase64(asset.base64 ?? null)
+    setMimeType(asset.mimeType ?? 'image/jpeg')
     if (asset.base64) await translateImage(asset.base64, asset.mimeType ?? 'image/jpeg')
+  }
+
+  const clearImage = () => {
+    setImageUri(null)
+    setBase64(null)
+    clear()
   }
 
   const handlePickGallery = async () => {
@@ -39,6 +51,11 @@ export default function CameraScreen() {
 
   const handleCapture = async () => {
     if (loading) return
+    // A photo is loaded but its translation failed — translate it again
+    if (imageUri && base64 && !result) {
+      await translateImage(base64, mimeType)
+      return
+    }
     const perm = await ImagePicker.requestCameraPermissionsAsync()
     if (!perm.granted) { toastService.error('Permission', 'Camera access denied'); return }
     try {
@@ -52,7 +69,7 @@ export default function CameraScreen() {
 
   const handleLive = () => {
     setLiveMode((v) => !v)
-    toastService.info('Coming soon', 'Live translate wired in Sprint 3')
+    toastService.info('Live Mode', 'Point your camera at text and tap Capture')
   }
 
   const handleCopyResult = async () => {
@@ -68,7 +85,7 @@ export default function CameraScreen() {
 
   const handleListenResult = () => {
     if (!result) return
-    playTTS(result.translated_text, result.target_lang)
+    speak(result.translated_text, result.target_lang)
   }
 
   return (
@@ -117,10 +134,21 @@ export default function CameraScreen() {
             <Stack position="absolute" top={12} right={12}
               backgroundColor="rgba(0,0,0,0.55)" borderRadius={10} padding={8}
             >
-              <TouchableOpacity onPress={() => { setImageUri(null); clear() }}>
+              <TouchableOpacity onPress={clearImage}>
                 <Feather name="x" size={18} color="#FFF" />
               </TouchableOpacity>
             </Stack>
+
+            {/* Processing overlay while the photo is read and translated */}
+            {loading && (
+              <Stack position="absolute" style={StyleSheet.absoluteFill}
+                alignItems="center" justifyContent="center"
+                backgroundColor="rgba(0,0,0,0.55)"
+              >
+                <ActivityIndicator size="large" color="#14B8A6" />
+                <Text variant="caption" color="#FFF" style={{ marginTop: 12 }}>Translating…</Text>
+              </Stack>
+            )}
           </Stack>
         ) : (
           <Stack
@@ -199,7 +227,7 @@ export default function CameraScreen() {
           >
             <Feather name="camera" size={20} color="#FFF" />
             <Text variant="caption" color="#FFF" fontWeight="700" style={{ marginTop: 4 }}>
-              {imageUri ? 'Retake' : 'Capture & Translate'}
+              {imageUri ? (base64 && !result && !loading ? 'Translate' : 'Retake') : 'Capture & Translate'}
             </Text>
           </TouchableOpacity>
 
@@ -227,13 +255,6 @@ export default function CameraScreen() {
             </Text>
           </TouchableOpacity>
         </Stack>
-
-        {loading && (
-          <Stack horizontal alignItems="center" justifyContent="center" gap={10} marginBottom={16}>
-            <ActivityIndicator color={C.primary} />
-            <Text variant="bodySmall" color={C.textSecondary}>Reading and translating text…</Text>
-          </Stack>
-        )}
 
         {/* Result card */}
         {result && (
@@ -284,10 +305,13 @@ export default function CameraScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleListenResult}
+                disabled={ttsLoading}
                 activeOpacity={0.7}
-                style={[styles.chipBtn, { backgroundColor: C.bgInput, borderColor: C.border }]}
+                style={[styles.chipBtn, { backgroundColor: C.bgInput, borderColor: C.border, opacity: ttsLoading ? 0.6 : 1 }]}
               >
-                <Feather name="volume-2" size={13} color={C.primary} />
+                {ttsLoading
+                  ? <ActivityIndicator size="small" color={C.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                  : <Feather name="volume-2" size={13} color={C.primary} />}
                 <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginLeft: 5 }}>Listen</Text>
               </TouchableOpacity>
               <TouchableOpacity

@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Platform, TouchableOpacity, ScrollView, StyleSheet, Animated, ActivityIndicator } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import { Platform, StyleSheet, Animated, ActivityIndicator } from 'react-native'
+import { router } from 'expo-router'
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
-import { StyledPage, Stack, toastService } from 'fluent-styles'
-import * as ExpoClipboard from 'expo-clipboard'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toastService } from 'fluent-styles'
 import * as FileSystem from 'expo-file-system'
 import { Audio } from 'expo-av'
 import { Text } from '../../src/components/Text'
+import { ScreenHeader } from '../../src/components/ScreenHeader'
+import { IconButton } from '../../src/components/IconButton'
 import { useColors, useIsDark } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { translateService, type TranslationResult } from '../../src/services/api'
 import { useTTS } from '../../src/hooks'
+import { MicIcon, StopIcon, BookmarkIcon, SpeakerIcon, TrashIcon } from '../../src/icons'
 
 type TranscriptLine = {
   id:          string
@@ -164,49 +166,32 @@ export default function VoiceScreen() {
     }
   }
 
-  const handleCopyLast = async () => {
-    const last = transcript[transcript.length - 1]
-    if (!last?.translated) return
-    await ExpoClipboard.setStringAsync(last.translated)
-    toastService.success('Copied', 'Translation copied')
-  }
-
   const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] })
   const glowScale   = glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] })
 
   const lastLine = transcript[transcript.length - 1]
+  const hasResult = !!lastLine?.translated && !listening && !processing
 
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Stack horizontal alignItems="center" justifyContent="space-between"
-          marginBottom={24} marginTop={8}
-        >
-          <Text variant="title" color={C.textPrimary} fontWeight="800">Live Voice</Text>
-          {transcript.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setTranscript([])}
-              activeOpacity={0.7}
-              style={[styles.clearBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-            >
-              <Feather name="trash-2" size={14} color={C.textMuted} />
-              <Text variant="caption" color={C.textMuted} fontWeight="600" style={{ marginLeft: 5 }}>Clear</Text>
-            </TouchableOpacity>
-          )}
-        </Stack>
+      <ScreenHeader
+        title="Live Voice"
+        variant="large"
+        onBackPress={() => router.push('/(tabs)' as any)}
+        rightIcon={transcript.length > 0
+          ? <IconButton icon={TrashIcon} label="Clear conversation" onPress={() => setTranscript([])} />
+          : undefined}
+      />
 
+      <StyledScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 40 }}
+      >
         {/* Waveform bars */}
-        <Stack horizontal gap={3} alignItems="flex-end" justifyContent="center"
-          height={48} marginBottom={24}
-        >
+        <Stack horizontal gap={3} alignItems="flex-end" justifyContent="center" height={48} marginBottom={24}>
           {barHeights.map((height, i) => {
             const active = listening && i % 3 !== 1
             return (
@@ -224,44 +209,38 @@ export default function VoiceScreen() {
 
         {/* Orb */}
         <Stack alignItems="center" justifyContent="center" marginBottom={24}>
-          {/* Glow ring */}
           <Animated.View style={[
             styles.glowRing,
-            { opacity: glowOpacity, transform: [{ scale: glowScale }] }
+            { borderColor: C.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] },
           ]} />
-
-          {/* Pulse wrapper */}
           <Animated.View style={{ transform: [{ scale: pulse }] }}>
-            <TouchableOpacity
+            <StyledPressable
               onPress={listening ? handleStop : handleStart}
-              activeOpacity={0.85}
-              style={[styles.orb, { borderColor: listening ? C.primary : C.border }]}
+              disabled={processing}
+              accessibilityRole="button"
+              accessibilityLabel={listening ? 'Stop recording' : 'Start recording'}
+              style={[styles.orb, { borderColor: listening ? C.primary : C.border, shadowColor: C.accent }]}
             >
               <Svg width={140} height={140} style={StyleSheet.absoluteFill}>
                 <Defs>
-                  {/* Blue-purple gradient matching mock */}
                   <LinearGradient id="orbGrad" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0" stopColor="#3B82F6" />
-                    <Stop offset="0.5" stopColor="#7C3AED" />
-                    <Stop offset="1" stopColor="#8B5CF6" />
+                    <Stop offset="0" stopColor={C.sumColor} />
+                    <Stop offset="1" stopColor={C.accent} />
                   </LinearGradient>
                 </Defs>
-                <Circle cx={70} cy={70} r={70} fill="url(#orbGrad)"
-                  fillOpacity={listening ? 0.22 : 0.10} />
+                <Circle cx={70} cy={70} r={70} fill="url(#orbGrad)" fillOpacity={listening ? 0.22 : 0.10} />
               </Svg>
-              <Text style={{ fontSize: 42 }}>🎙️</Text>
-            </TouchableOpacity>
+              <MicIcon size={48} strokeWidth={1.6} color={listening ? C.primary : C.accent} />
+            </StyledPressable>
           </Animated.View>
         </Stack>
 
         {/* Status label */}
         <Stack alignItems="center" marginBottom={28}>
           <Stack horizontal alignItems="center" gap={8}>
-            {listening && (
-              <Animated.View style={[styles.liveDot, { opacity: dotOpacity }]} />
-            )}
-            <Text variant="body" color={listening || processing ? C.primary : C.textSecondary} fontWeight="700">
-              {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap mic to start'}
+            {listening && <Animated.View style={[styles.liveDot, { backgroundColor: C.live, opacity: dotOpacity }]} />}
+            <Text variant="label" color={listening || processing ? C.primary : C.textSecondary}>
+              {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap the mic to start'}
             </Text>
           </Stack>
           <Text variant="caption" color={C.textMuted} style={{ marginTop: 4 }}>
@@ -271,13 +250,11 @@ export default function VoiceScreen() {
 
         {/* Interim bubble while recording and translating — replaced by the result */}
         {(listening || processing) && (
-          <Stack
-            backgroundColor={`${C.primary}20`} borderRadius={16} padding={14} marginBottom={16}
-            style={{ borderWidth: 1, borderColor: `${C.primary}35` }}
+          <StyledCard
+            backgroundColor={C.primaryBg} borderRadius={16} padding={14} marginBottom={16}
+            borderWidth={1} borderColor={C.border}
           >
-            <Text variant="caption" color={C.primary} fontWeight="700"
-              style={{ letterSpacing: 0.8, marginBottom: 6 }}
-            >
+            <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>
               {listening ? `LISTENING${'.'.repeat(dots)}` : 'TRANSLATING…'}
             </Text>
             {listening ? (
@@ -288,90 +265,70 @@ export default function VoiceScreen() {
                 <Text variant="body" color={C.textSecondary}>Working out what you said</Text>
               </Stack>
             )}
-          </Stack>
+          </StyledCard>
         )}
 
-        {/* YOU SAID bubble */}
+        {/* YOU SAID + TRANSLATION */}
         {lastLine && !listening && !processing && (
           <Stack gap={12} marginBottom={16}>
-            <Stack
-              backgroundColor={`${C.primary}20`}
-              borderRadius={16} padding={14}
-              style={{ borderWidth: 1, borderColor: `${C.primary}35` }}
-            >
-              <Text
-                variant="caption"
-                color={C.primary}
-                fontWeight="700"
-                style={{ letterSpacing: 0.8, marginBottom: 6 }}
-              >
-                YOU SAID
-              </Text>
+            <StyledCard backgroundColor={C.primaryBg} borderRadius={16} padding={14} borderWidth={1} borderColor={C.border}>
+              <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>YOU SAID</Text>
               <Text variant="body" color={C.textPrimary}>{lastLine.text}</Text>
-            </Stack>
-
+            </StyledCard>
             {lastLine.translated && (
-              <Stack
-                backgroundColor="#7C3AED20"
-                borderRadius={16} padding={14}
-                style={{ borderWidth: 1, borderColor: '#7C3AED35' }}
-              >
-                <Text
-                  variant="caption"
-                  color="#7C3AED"
-                  fontWeight="700"
-                  style={{ letterSpacing: 0.8, marginBottom: 6 }}
-                >
-                  TRANSLATION
-                </Text>
+              <StyledCard backgroundColor={C.accentBg} borderRadius={16} padding={14} borderWidth={1} borderColor={C.border}>
+                <Text variant="overline" color={C.accent} style={{ letterSpacing: 0.8, marginBottom: 6 }}>TRANSLATION</Text>
                 <Text variant="body" color={C.textPrimary}>{lastLine.translated}</Text>
-              </Stack>
+              </StyledCard>
             )}
           </Stack>
         )}
 
-        {/* Empty state */}
         {transcript.length === 0 && !listening && !processing && (
-          <Stack alignItems="center" gap={10} paddingTop={8}>
-            <Text variant="bodySmall" color={C.textMuted} textAlign="center">
-              Your conversation will appear here
-            </Text>
-          </Stack>
+          <Text variant="bodySmall" color={C.textMuted} textAlign="center" style={{ paddingTop: 8 }}>
+            Your conversation will appear here
+          </Text>
         )}
-      </ScrollView>
+      </StyledScrollView>
 
       {/* Bottom controls */}
       <Stack horizontal alignItems="center" justifyContent="center" gap={40}
-        paddingHorizontal={32} paddingBottom={Platform.OS === 'ios' ? 32 : 20} paddingTop={16}
-        style={{ borderTopWidth: 1, borderTopColor: C.border }}
+        paddingHorizontal={32} paddingBottom={16} paddingTop={16}
+        borderTopWidth={1} borderTopColor={C.border} backgroundColor={C.bg}
       >
-        {/* Save */}
-        <TouchableOpacity onPress={handleSaveLast} activeOpacity={0.7}
-          style={[styles.bottomBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-        >
-          <Text style={{ fontSize: 20 }}>⭐</Text>
-        </TouchableOpacity>
+        <IconButton icon={BookmarkIcon} label="Save to phrasebook" onPress={handleSaveLast}
+          size={52} iconSize={20} color={C.primary} background={C.bgCard} disabled={!hasResult} />
 
-        {/* Stop / Start — centre, bigger */}
-        <TouchableOpacity
+        <StyledPressable
+          width={70} height={70} borderRadius={35}
+          alignItems="center" justifyContent="center"
+          backgroundColor={listening ? C.danger : C.primary}
           onPress={listening ? handleStop : handleStart}
-          activeOpacity={0.7}
-          style={[
-            styles.stopBtn,
-            { backgroundColor: listening ? '#EF4444' : C.primary }
-          ]}
+          disabled={processing}
+          accessibilityRole="button" accessibilityLabel={listening ? 'Stop recording' : 'Start recording'}
+          style={{
+            opacity: processing ? 0.6 : 1,
+            shadowColor: listening ? C.danger : C.primary, shadowOpacity: 0.4, shadowRadius: 16,
+            shadowOffset: { width: 0, height: 4 }, elevation: 8,
+          }}
         >
-          <Feather name={listening ? 'square' : 'mic'} size={26} color="#FFF" />
-        </TouchableOpacity>
+          {listening
+            ? <StopIcon size={24} strokeWidth={2} color={C.white} />
+            : <MicIcon size={26} strokeWidth={2.2} color={C.white} />}
+        </StyledPressable>
 
-        {/* Listen */}
-        <TouchableOpacity onPress={handleListen} activeOpacity={0.7} disabled={ttsLoading}
-          style={[styles.bottomBtn, { backgroundColor: C.bgCard, borderColor: C.border, opacity: ttsLoading ? 0.6 : 1 }]}
+        <StyledPressable
+          width={52} height={52} borderRadius={26}
+          alignItems="center" justifyContent="center"
+          backgroundColor={C.bgCard} borderWidth={1} borderColor={C.border}
+          onPress={handleListen} disabled={!hasResult || ttsLoading}
+          accessibilityRole="button" accessibilityLabel="Listen to translation"
+          style={{ opacity: !hasResult ? 0.5 : 1 }}
         >
           {ttsLoading
             ? <ActivityIndicator size="small" color={C.primary} />
-            : <Text style={{ fontSize: 20 }}>🔊</Text>}
-        </TouchableOpacity>
+            : <SpeakerIcon size={20} strokeWidth={1.8} color={C.primary} />}
+        </StyledPressable>
       </Stack>
     </StyledPage>
   )
@@ -380,41 +337,18 @@ export default function VoiceScreen() {
 const styles = StyleSheet.create({
   liveDot: {
     width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#22C55E',
-  },
-  clearBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 12, borderWidth: 1,
   },
   orb: {
     width: 140, height: 140, borderRadius: 70,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.4,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4, shadowRadius: 28, shadowOffset: { width: 0, height: 8 },
     elevation: 12,
     backgroundColor: 'transparent',
   },
   glowRing: {
     position: 'absolute',
     width: 190, height: 190, borderRadius: 95,
-    borderWidth: 2, borderColor: '#7C3AED',
-  },
-  bottomBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
-  },
-  stopBtn: {
-    width: 70, height: 70, borderRadius: 35,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    borderWidth: 2,
   },
 })

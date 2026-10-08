@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import { Platform, KeyboardAvoidingView, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
+import { Platform, KeyboardAvoidingView } from 'react-native'
 import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
-import { StyledPage, StyledScrollView, Stack } from 'fluent-styles'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, StyledForm } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
-import { AuthBackground, GradientButton } from '../../src/components/AuthUI'
-import { useColors, useIsDark } from '../../src/constants'
+import { AuthBackground, BrandMark, GradientButton, OrDivider, EyeToggle, EMAIL_RE } from '../../src/components/AuthUI'
+import { useColors, useIsDark, getFieldColors } from '../../src/constants'
 import { useAuth } from '../../src/hooks'
+import { MailIcon, LockIcon } from '../../src/icons'
 
 export default function LoginScreen() {
   const C      = useColors()
@@ -15,7 +15,18 @@ export default function LoginScreen() {
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [showPwd,  setShowPwd]  = useState(false)
+  const [showPw,   setShowPw]   = useState(false)
+  const [tried,    setTried]    = useState(false)
+
+  const FC = getFieldColors(C)
+  const emailError = tried && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined
+  const pwError    = tried && !password ? 'Enter your password' : undefined
+
+  const submit = () => {
+    setTried(true)
+    if (!EMAIL_RE.test(email.trim()) || !password) return
+    login(email.trim(), password)
+  }
 
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
@@ -29,105 +40,70 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Brand */}
-          <Stack alignItems="center" marginBottom={32}>
-            <Stack
-              width={72} height={72} borderRadius={36}
-              alignItems="center" justifyContent="center"
-              backgroundColor={C.primaryBg}
-              style={{ borderWidth: 2, borderColor: `${C.primary}40`, marginBottom: 16 }}
-            >
-              <Text style={{ fontSize: 32 }}>🌍</Text>
-            </Stack>
-            <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
-              Welcome back
-            </Text>
-            <Text variant="body" color={C.textSecondary} textAlign="center" style={{ marginTop: 6 }}>
-              Sign in to Tranquis
-            </Text>
+          <Stack marginBottom={36}>
+            <BrandMark title="Welcome back" subtitle="Sign in to Tranquis" />
           </Stack>
 
-          {/* Card */}
-          <Stack
-            backgroundColor={C.bgCard} borderRadius={22} padding={24} gap={16}
-            style={{ borderWidth: 1, borderColor: C.border }}
+          <StyledCard backgroundColor={C.bgCard} borderRadius={22} padding={20} marginBottom={14}
+            borderWidth={1} borderColor={C.border}
+            style={{ shadowColor: C.primary, shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 }}
           >
-            {/* Email */}
-            <Stack gap={8}>
-              <Text variant="caption" color={C.textSecondary} fontWeight="700">Email</Text>
-              <Stack
-                horizontal alignItems="center"
-                backgroundColor={C.bg} borderRadius={14} paddingHorizontal={14}
-                style={{ borderWidth: 1, borderColor: C.border, height: 52 }}
-              >
-                <Feather name="mail" size={16} color={C.textMuted} style={{ marginRight: 10 }} />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={C.textMuted}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={[styles.input, { color: C.textPrimary }]}
-                />
-              </Stack>
+            <Stack gap={16}>
+              <StyledForm.Input
+                label="Email address"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                errorMessage={emailError}
+                leftIcon={<MailIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
+                focusColor={C.primary}
+                colors={FC}
+              />
+              <StyledForm.Input
+                label="Password"
+                placeholder="Your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPw}
+                returnKeyType="go"
+                onSubmitEditing={submit}
+                errorMessage={pwError}
+                leftIcon={<LockIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
+                rightIcon={<EyeToggle shown={showPw} onPress={() => setShowPw((v) => !v)} />}
+                focusColor={C.primary}
+                colors={FC}
+              />
             </Stack>
+          </StyledCard>
 
-            {/* Password */}
-            <Stack gap={8}>
-              <Text variant="caption" color={C.textSecondary} fontWeight="700">Password</Text>
-              <Stack
-                horizontal alignItems="center"
-                backgroundColor={C.bg} borderRadius={14} paddingHorizontal={14}
-                style={{ borderWidth: 1, borderColor: C.border, height: 52 }}
-              >
-                <Feather name="lock" size={16} color={C.textMuted} style={{ marginRight: 10 }} />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Your password"
-                  placeholderTextColor={C.textMuted}
-                  secureTextEntry={!showPwd}
-                  style={[styles.input, { color: C.textPrimary }]}
-                />
-                <TouchableOpacity onPress={() => setShowPwd(v => !v)} activeOpacity={0.7}>
-                  <Feather name={showPwd ? 'eye-off' : 'eye'} size={16} color={C.textMuted} />
-                </TouchableOpacity>
-              </Stack>
-            </Stack>
-
-            {/* Forgot password */}
-            <Stack alignItems="flex-end" marginTop={-8}>
-              <TouchableOpacity onPress={() => router.push('/auth/forgot-password' as any)} activeOpacity={0.7}>
-                <Text variant="caption" color={C.primary} fontWeight="600">Forgot password?</Text>
-              </TouchableOpacity>
-            </Stack>
-
-            {/* Submit */}
-            <GradientButton
-              label={loading ? 'Signing in…' : 'Sign in'}
-              onPress={() => login(email.trim(), password)}
-              disabled={loading || !email.trim() || !password}
-            />
+          <Stack alignItems="flex-end" marginBottom={4}>
+            <StyledPressable onPress={() => router.push('/auth/forgot-password' as any)} hitSlop={8}
+              accessibilityRole="button" accessibilityLabel="Forgot password"
+            >
+              <Text variant="bodySmall" color={C.primary} fontWeight="700">Forgot password?</Text>
+            </StyledPressable>
           </Stack>
 
-          {/* Register link */}
-          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={24}>
-            <Text variant="body" color={C.textSecondary}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => router.replace('/auth/register' as any)} activeOpacity={0.7}>
-              <Text variant="body" color={C.primary} fontWeight="700">Sign up</Text>
-            </TouchableOpacity>
+          <Stack marginTop={8}>
+            <GradientButton label="Sign in" loading={loading} onPress={submit} />
+          </Stack>
+
+          <OrDivider />
+
+          <Stack horizontal alignItems="center" justifyContent="center" gap={5}>
+            <Text variant="bodySmall" color={C.textSecondary}>Don't have an account?</Text>
+            <StyledPressable onPress={() => router.replace('/auth/register' as any)}
+              accessibilityRole="button" accessibilityLabel="Create an account"
+            >
+              <Text variant="bodySmall" color={C.primary} fontWeight="700">Create one</Text>
+            </StyledPressable>
           </Stack>
         </StyledScrollView>
       </KeyboardAvoidingView>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  input: {
-    flex: 1, height: 52,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 15,
-  },
-})

@@ -1,14 +1,13 @@
 import React, { useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
+import { TranslateIcon, MicIcon, CameraIcon, BookIcon, ClockIcon, type IconComponent } from '../../src/icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '../../src/constants'
 import { useAuthStore, usePremiumStore } from '../../src/stores'
 import { identifyUser } from '../../src/services/premiumService'
 
-const Icon = ({ name, color }: { name: keyof typeof Feather.glyphMap; color: string }) => (
-  <Feather name={name} size={22} color={color} />
-)
+const tabIcon = (Icon: IconComponent) =>
+  ({ color }: { color: string }) => <Icon size={22} strokeWidth={2} color={color} />
 
 export default function TabsLayout() {
   const C    = useColors()
@@ -32,7 +31,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: C.bgCard,
           borderTopColor:  C.border,
-          borderTopWidth:  0.1,
+          borderTopWidth:  0.5,
           height:          60 + insets.bottom,
           paddingBottom:   insets.bottom + 4,
           paddingTop:      6,
@@ -47,35 +46,35 @@ export default function TabsLayout() {
         name="index"
         options={{
           title:      'Translate',
-          tabBarIcon: ({ color }) => <Icon name="type" color={color} />,
+          tabBarIcon: tabIcon(TranslateIcon),
         }}
       />
       <Tabs.Screen
         name="voice"
         options={{
           title:      'Voice',
-          tabBarIcon: ({ color }) => <Icon name="mic" color={color} />,
+          tabBarIcon: tabIcon(MicIcon),
         }}
       />
       <Tabs.Screen
         name="camera"
         options={{
           title:      'Camera',
-          tabBarIcon: ({ color }) => <Icon name="camera" color={color} />,
+          tabBarIcon: tabIcon(CameraIcon),
         }}
       />
       <Tabs.Screen
         name="phrasebook"
         options={{
           title:      'Phrasebook',
-          tabBarIcon: ({ color }) => <Icon name="book" color={color} />,
+          tabBarIcon: tabIcon(BookIcon),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title:      'History',
-          tabBarIcon: ({ color }) => <Icon name="clock" color={color} />,
+          tabBarIcon: tabIcon(ClockIcon),
         }}
       />
     </Tabs>

@@ -1,10 +1,10 @@
 import React from 'react'
-import { Platform, ScrollView } from 'react-native'
-import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
-import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
+import { Platform } from 'react-native'
+import { StyledPage, StyledScrollView, Stack, StyledCard } from 'fluent-styles'
 import { Text } from '../src/components/Text'
+import { ScreenHeader } from '../src/components/ScreenHeader'
 import { useColors, useIsDark } from '../src/constants'
+import { goBack } from '../src/utils'
 
 const SECTIONS = [
   {
@@ -17,7 +17,7 @@ const SECTIONS = [
   },
   {
     title: 'Data retention',
-    body: 'You can delete your translation history and phrasebook at any time from within the app. You may also delete your account entirely, which removes all personal data within 30 days.',
+    body: 'You can delete your translation history and phrasebook at any time from within the app. Translations and saved phrases are deleted automatically after 12 months. You can also delete your account from your profile, which immediately removes your account and all its data. Your Tranquis account is shared with CareerMind/Interquis, so deleting it removes that data too.',
   },
   {
     title: 'Third parties',
@@ -38,41 +38,27 @@ export default function PrivacyScreen() {
   const isDark = useIsDark()
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage flex={1} backgroundColor={C.bg}
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
-      >
-        <Stack horizontal alignItems="center" gap={12} marginBottom={24} marginTop={8}>
-          <StyledPressable onPress={() => router.back()} hitSlop={10}>
-            <Feather name="arrow-left" size={22} color={C.textPrimary} />
-          </StyledPressable>
-          <Text variant="title" color={C.textPrimary} fontWeight="800">Privacy Policy</Text>
-        </Stack>
+      <ScreenHeader title="Privacy Policy" onBackPress={() => goBack('/profile')} />
 
-        <Text variant="caption" color={C.textMuted} marginBottom={20}>
+      <StyledScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <Text variant="caption" color={C.textMuted} paddingHorizontal={4} style={{ marginBottom: 12 }}>
           Last updated: October 2026
         </Text>
-
-        <Stack gap={16}>
-          {SECTIONS.map((s) => (
-            <Stack key={s.title}
-              backgroundColor={C.bgCard} borderRadius={16} padding={16}
-              style={{ borderWidth: 1, borderColor: C.border }}
+        <Stack gap={12}>
+          {SECTIONS.map((section) => (
+            <StyledCard key={section.title} backgroundColor={C.bgCard} borderRadius={16} padding={16}
+              borderWidth={1} borderColor={C.border}
             >
-              <Text variant="body" color={C.textPrimary} fontWeight="800" marginBottom={8}>
-                {s.title}
-              </Text>
-              <Text variant="bodySmall" color={C.textSecondary} style={{ lineHeight: 22 }}>
-                {s.body}
-              </Text>
-            </Stack>
+              <Text variant="label" color={C.textPrimary} fontWeight="700" style={{ marginBottom: 8 }}>{section.title}</Text>
+              <Text variant="bodySmall" color={C.textSecondary} style={{ lineHeight: 22 }}>{section.body}</Text>
+            </StyledCard>
           ))}
         </Stack>
-      </ScrollView>
+      </StyledScrollView>
     </StyledPage>
   )
 }

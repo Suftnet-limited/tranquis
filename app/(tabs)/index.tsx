@@ -1,164 +1,25 @@
-import React, { useState, useRef } from 'react'
-import {
-  TextInput, ScrollView, TouchableOpacity, ActivityIndicator,
-  Platform, StyleSheet,
-} from 'react-native'
+import React, { useState } from 'react'
+import { TextInput, ActivityIndicator, Platform } from 'react-native'
 import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
 import * as ExpoClipboard from 'expo-clipboard'
-import { StyledPage, Stack } from 'fluent-styles'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toastService } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
+import { IconButton } from '../../src/components/IconButton'
+import { ActionChip } from '../../src/components/ActionChip'
+import { SectionLabel } from '../../src/components/SectionLabel'
 import { useColors, useIsDark, TONES, getLang } from '../../src/constants'
-import { useTranslatorStore } from '../../src/stores'
-import { useTranslate, playTTS } from '../../src/hooks'
+import { useTranslatorStore, useAuthStore } from '../../src/stores'
+import { useTranslate, useTTS } from '../../src/hooks'
+import {
+  GearIcon, ChevronDownIcon, SwapIcon, MicIcon, CameraIcon, ClipboardIcon, XIcon,
+  ArrowRightIcon, ChevronRightIcon, SpeakerIcon, CopyIcon, BookmarkIcon, ICONS, type IconName,
+} from '../../src/icons'
 
-// ─── Language Pair Row ─────────────────────────────────────────────────────────
-function LangPairRow() {
-  const C      = useColors()
-  const { sourceLang, targetLang, swapLangs } = useTranslatorStore()
-  const source = getLang(sourceLang)
-  const target = getLang(targetLang)
+const MAX_CHARS = 5000
 
-  const openPicker = (side: 'source' | 'target') => {
-    router.push({ pathname: '/lang-picker', params: { side } } as any)
-  }
+const greetingFor = (hour: number) =>
+  hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
-  return (
-    <Stack horizontal alignItems="center" gap={8} marginBottom={14}>
-      <TouchableOpacity
-        style={[styles.langBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-        onPress={() => openPicker('source')}
-        activeOpacity={0.7}
-      >
-        <Text style={{ fontSize: 20 }}>{source.flag}</Text>
-        <Text variant="label" color={C.textPrimary} fontWeight="700" marginLeft={6}>{source.label}</Text>
-        <Feather name="chevron-down" size={14} color={C.textMuted} style={{ marginLeft: 4 }} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.swapBtn, { backgroundColor: C.primaryBg, borderColor: `${C.primary}30` }]}
-        onPress={swapLangs}
-        activeOpacity={0.7}
-      >
-        <Feather name="repeat" size={18} color={C.primary} />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.langBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-        onPress={() => openPicker('target')}
-        activeOpacity={0.7}
-      >
-        <Text style={{ fontSize: 20 }}>{target.flag}</Text>
-        <Text variant="label" color={C.textPrimary} fontWeight="700" marginLeft={6}>{target.label}</Text>
-        <Feather name="chevron-down" size={14} color={C.textMuted} style={{ marginLeft: 4 }} />
-      </TouchableOpacity>
-    </Stack>
-  )
-}
-
-// ─── Tone Selector ─────────────────────────────────────────────────────────────
-function ToneRow() {
-  const C    = useColors()
-  const { tone, setTone } = useTranslatorStore()
-
-  return (
-    <Stack horizontal gap={8} marginBottom={14}>
-      {TONES.map((t) => {
-        const active = tone === t.key
-        return (
-          <TouchableOpacity
-            key={t.key}
-            onPress={() => setTone(t.key)}
-            activeOpacity={0.7}
-            style={[
-              styles.toneChip,
-              {
-                backgroundColor: active ? 'transparent' : C.bgCard,
-                borderColor:     active ? '#7C3AED' : C.border,
-                borderWidth:     active ? 2 : 1,
-              },
-            ]}
-          >
-            <Feather name={t.icon as any} size={12} color={active ? '#7C3AED' : C.textSecondary} />
-            <Text
-              variant="caption"
-              color={active ? '#7C3AED' : C.textSecondary}
-              fontWeight={active ? '700' : '600'}
-              style={{ marginLeft: 5 }}
-            >
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        )
-      })}
-    </Stack>
-  )
-}
-
-// ─── Translation Result Card ───────────────────────────────────────────────────
-function ResultCard({ result, onSave, onCopy, onListen, onExplain }: {
-  result: { id: string; translated_text: string; explanation?: string }
-  onSave:    () => void
-  onCopy:    () => void
-  onListen:  () => void
-  onExplain: () => void
-}) {
-  const C = useColors()
-  return (
-    <Stack
-      backgroundColor={`${C.primary}15`}
-      borderRadius={20}
-      padding={18}
-      marginTop={12}
-      style={{ borderWidth: 1, borderColor: `${C.primary}40` }}
-    >
-      <Text variant="title" color={C.textPrimary} style={{ lineHeight: 30, marginBottom: 14 }}>
-        {result.translated_text}
-      </Text>
-
-      {!!result.explanation && (
-        <Stack
-          backgroundColor={C.primaryBg}
-          borderRadius={12}
-          padding={12}
-          marginBottom={14}
-          style={{ borderWidth: 1, borderColor: `${C.primary}25` }}
-        >
-          <Stack horizontal alignItems="center" gap={6} marginBottom={6}>
-            <Feather name="info" size={14} color={C.primary} />
-            <Text variant="caption" color={C.primary} fontWeight="700">Explanation</Text>
-          </Stack>
-          <Text variant="bodySmall" color={C.textSecondary} style={{ lineHeight: 20 }}>
-            {result.explanation}
-          </Text>
-        </Stack>
-      )}
-
-      <Stack horizontal gap={8} flexWrap="wrap">
-        {[
-          { icon: 'volume-2', label: 'Listen',  onPress: onListen  },
-          { icon: 'copy',     label: 'Copy',    onPress: onCopy    },
-          { icon: 'bookmark', label: 'Save',    onPress: onSave    },
-          { icon: 'info',     label: 'Explain', onPress: onExplain },
-        ].map((a) => (
-          <TouchableOpacity
-            key={a.label}
-            onPress={a.onPress}
-            activeOpacity={0.7}
-            style={[styles.actionChip, { backgroundColor: C.bgCard, borderColor: C.border }]}
-          >
-            <Feather name={a.icon as any} size={13} color={C.primary} />
-            <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginLeft: 5 }}>
-              {a.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </Stack>
-    </Stack>
-  )
-}
-
-// ─── Quick Phrases ─────────────────────────────────────────────────────────────
 const QUICK_PHRASES = [
   { emoji: '🏥', text: 'Where is the nearest hospital?' },
   { emoji: '💰', text: 'How much does this cost?' },
@@ -167,114 +28,158 @@ const QUICK_PHRASES = [
   { emoji: '🙏', text: 'Thank you very much.' },
 ]
 
-// ─── Main Screen ───────────────────────────────────────────────────────────────
+// ─── Language pair ────────────────────────────────────────────────────────────
+function LangButton({ code, onPress }: { code: string; onPress: () => void }) {
+  const C = useColors()
+  const lang = getLang(code)
+  return (
+    <StyledPressable flex={1} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Change language, ${lang.label}`}>
+      <StyledCard
+        flexDirection="row" alignItems="center" gap={8}
+        backgroundColor={C.bgCard} borderRadius={14} paddingHorizontal={12} paddingVertical={11}
+        borderWidth={1} borderColor={C.border}
+      >
+        <Text style={{ fontSize: 20 }}>{lang.flag}</Text>
+        <Text variant="label" color={C.textPrimary} numberOfLines={1} style={{ flex: 1 }}>{lang.label}</Text>
+        <ChevronDownIcon size={14} strokeWidth={2} color={C.textMuted} />
+      </StyledCard>
+    </StyledPressable>
+  )
+}
+
+function LangPairRow() {
+  const C = useColors()
+  const { sourceLang, targetLang, swapLangs } = useTranslatorStore()
+  const openPicker = (side: 'source' | 'target') =>
+    router.push({ pathname: '/lang-picker', params: { side } } as any)
+
+  return (
+    <Stack horizontal alignItems="center" gap={8} marginBottom={14}>
+      <LangButton code={sourceLang} onPress={() => openPicker('source')} />
+      <IconButton icon={SwapIcon} label="Swap languages" onPress={swapLangs}
+        size={42} iconSize={18} color={C.primary} background={C.primaryBg} />
+      <LangButton code={targetLang} onPress={() => openPicker('target')} />
+    </Stack>
+  )
+}
+
+// ─── Tone chips ───────────────────────────────────────────────────────────────
+function ToneRow() {
+  const C = useColors()
+  const { tone, setTone } = useTranslatorStore()
+  return (
+    <Stack horizontal gap={8} marginBottom={14} flexWrap="wrap">
+      {TONES.map((t) => {
+        const active = tone === t.key
+        const Icon = ICONS[t.icon as IconName]
+        return (
+          <StyledPressable key={t.key} onPress={() => setTone(t.key)}
+            accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`${t.label} tone`}
+          >
+            <Stack
+              horizontal alignItems="center" gap={5}
+              paddingHorizontal={12} paddingVertical={7} borderRadius={20}
+              backgroundColor={active ? C.accentBg : C.bgCard}
+              borderWidth={1} borderColor={active ? C.accent : C.border}
+            >
+              {Icon && <Icon size={12} strokeWidth={2} color={active ? C.accent : C.textSecondary} />}
+              <Text variant="caption" color={active ? C.accent : C.textSecondary} fontWeight={active ? '700' : '600'}>
+                {t.label}
+              </Text>
+            </Stack>
+          </StyledPressable>
+        )
+      })}
+    </Stack>
+  )
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function TranslateScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-
-  const [text, setText]               = useState('')
-  const [explainNext, setExplainNext] = useState(false)
-  const inputRef = useRef<TextInput>(null)
-
+  const user   = useAuthStore((s) => s.user)
   const { translate, saveToPhrasebook, loading, result, clear } = useTranslate()
+  const { speak, loading: ttsLoading } = useTTS()
 
-  const handleTranslate = () => {
-    if (!text.trim()) return
-    translate(text, explainNext)
+  const [text, setText] = useState('')
+  const firstName = user?.full_name?.trim().split(/\s+/)[0]
+  const canTranslate = !!text.trim() && !loading
+
+  const handleTranslate = () => { if (canTranslate) translate(text) }
+
+  // Fill the box and translate straight away — passing the phrase directly,
+  // since state from setText isn't visible until the next render
+  const handleQuickPhrase = (phrase: string) => {
+    setText(phrase)
+    translate(phrase)
   }
 
   const handlePaste = async () => {
-    try {
-      const t = await ExpoClipboard.getStringAsync()
-      if (t) setText(t)
-    } catch {}
+    const pasted = await ExpoClipboard.getStringAsync().catch(() => '')
+    if (pasted) setText(pasted.slice(0, MAX_CHARS))
   }
 
-  const handleCopyResult = async () => {
+  const handleCopy = async () => {
     if (!result) return
     await ExpoClipboard.setStringAsync(result.translated_text)
+    toastService.success('Copied', 'Translation copied')
   }
 
-  const handleSave = () => {
-    if (!result) return
-    saveToPhrasebook(result)
-  }
-
-  const handleListen = () => {
-    if (!result) return
-    playTTS(result.translated_text, result.target_lang)
-  }
-
-  const handleExplain = () => {
-    if (!result) {
-      setExplainNext(true)
-      return
-    }
-    translate(text, true)
-  }
-
-  const handleClear = () => {
-    setText('')
-    clear()
-  }
+  const handleClear = () => { setText(''); clear() }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage
+      flex={1}
+      backgroundColor={C.bg}
+      showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Stack horizontal alignItems="center" justifyContent="space-between" marginBottom={20} marginTop={8}>
-          <Stack horizontal alignItems="center" gap={8}>
-            <Text variant="title" color={C.textPrimary} fontWeight="800">Tranquis</Text>
-            <Text variant="bodySmall" color={C.textMuted} fontWeight="500">•</Text>
-            {/* Green online dot */}
-            <Stack horizontal alignItems="center" gap={5}>
-              <Stack
-                width={8} height={8} borderRadius={4}
-                backgroundColor="#22C55E"
-                style={{ shadowColor: '#22C55E', shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 3 }}
-              />
-              <Text variant="caption" color="#22C55E" fontWeight="600">Online</Text>
+      <StyledPage.Header.Full>
+        {/* Greeting header */}
+        <Stack marginHorizontal={20} horizontal alignItems="center" justifyContent="space-between">
+          <Stack horizontal alignItems="center" flex={1} gap={12}>
+            <StyledPressable onPress={() => router.push('/profile' as any)} accessibilityRole="button" accessibilityLabel="Open profile">
+              <Stack width={40} height={40} borderRadius={20} backgroundColor={C.primary} alignItems="center" justifyContent="center">
+                <Text variant="label" color={C.white} fontWeight="800">
+                  {(firstName?.charAt(0) || 'T').toUpperCase()}
+                </Text>
+              </Stack>
+            </StyledPressable>
+            <Stack flex={1}>
+              <Text variant="body" color={C.textSecondary}>{greetingFor(new Date().getHours())}</Text>
+              <Text variant="title" color={C.textPrimary} numberOfLines={1} style={{ marginTop: 2 }}>
+                {firstName || 'Tranquis'}
+              </Text>
             </Stack>
           </Stack>
-          <TouchableOpacity
-            onPress={() => router.push('/profile' as any)}
-            activeOpacity={0.7}
-            style={[styles.settingsBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-          >
-            <Feather name="settings" size={18} color={C.textSecondary} />
-          </TouchableOpacity>
+          <IconButton icon={GearIcon} label="Open settings" onPress={() => router.push('/profile' as any)} />
         </Stack>
+      </StyledPage.Header.Full>
 
-        {/* Lang pair */}
+      <StyledScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ padding: 20, paddingTop: 12, paddingBottom: 40 }}
+      >
         <LangPairRow />
-
-        {/* Tone chips */}
         <ToneRow />
 
         {/* Input card */}
-        <Stack
-          backgroundColor={C.bgCard}
-          borderRadius={20}
-          padding={16}
-          style={{ borderWidth: 1, borderColor: C.border, minHeight: 140 }}
+        <StyledCard
+          backgroundColor={C.bgCard} borderRadius={20} padding={16}
+          borderWidth={1} borderColor={C.border} shadow="light"
         >
           <TextInput
-            ref={inputRef}
             value={text}
             onChangeText={(t) => { setText(t); if (!t) clear() }}
             placeholder="Type or paste text to translate…"
             placeholderTextColor={C.textMuted}
             multiline
+            maxLength={MAX_CHARS}
             style={{
-              flex: 1, minHeight: 90,
+              minHeight: 96,
               fontFamily: 'PlusJakartaSans_400Regular',
               fontSize: 16, lineHeight: 24,
               color: C.textPrimary,
@@ -283,117 +188,81 @@ export default function TranslateScreen() {
           />
 
           <Stack horizontal alignItems="center" justifyContent="space-between" marginTop={10}>
-            <Stack horizontal gap={14}>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/voice' as any)} activeOpacity={0.7}>
-                <Feather name="mic" size={20} color={C.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/camera' as any)} activeOpacity={0.7}>
-                <Feather name="camera" size={20} color={C.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePaste} activeOpacity={0.7}>
-                <Feather name="clipboard" size={20} color={C.primary} />
-              </TouchableOpacity>
+            <Stack horizontal gap={6} marginLeft={-8}>
+              <IconButton icon={MicIcon} label="Voice translate" size={36} iconSize={19}
+                color={C.primary} background="transparent" onPress={() => router.push('/(tabs)/voice' as any)} />
+              <IconButton icon={CameraIcon} label="Camera translate" size={36} iconSize={19}
+                color={C.primary} background="transparent" onPress={() => router.push('/(tabs)/camera' as any)} />
+              <IconButton icon={ClipboardIcon} label="Paste" size={36} iconSize={19}
+                color={C.primary} background="transparent" onPress={handlePaste} />
               {!!text && (
-                <TouchableOpacity onPress={handleClear} activeOpacity={0.7}>
-                  <Feather name="x" size={20} color={C.textMuted} />
-                </TouchableOpacity>
+                <IconButton icon={XIcon} label="Clear text" size={36} iconSize={19}
+                  color={C.textMuted} background="transparent" onPress={handleClear} />
               )}
             </Stack>
 
-            <Stack horizontal alignItems="center" gap={8}>
-              {!!text && (
-                <Text variant="caption" color={C.textMuted}>{text.length}/5000</Text>
-              )}
-              <TouchableOpacity
-                onPress={handleTranslate}
-                disabled={!text.trim() || loading}
-                activeOpacity={0.7}
-                style={[
-                  styles.translateBtn,
-                  { backgroundColor: text.trim() ? C.primary : C.bgMuted }
-                ]}
+            <Stack horizontal alignItems="center" gap={10}>
+              {!!text && <Text variant="caption" color={C.textMuted}>{text.length}/{MAX_CHARS}</Text>}
+              <StyledPressable
+                width={42} height={42} borderRadius={21}
+                alignItems="center" justifyContent="center"
+                backgroundColor={text.trim() ? C.primary : C.bgMuted}
+                onPress={handleTranslate} disabled={!canTranslate}
+                accessibilityRole="button" accessibilityLabel="Translate"
               >
                 {loading
-                  ? <ActivityIndicator size="small" color="#FFF" />
-                  : <Feather name="arrow-right" size={18} color={text.trim() ? '#FFF' : C.textMuted} />}
-              </TouchableOpacity>
+                  ? <ActivityIndicator size="small" color={C.white} />
+                  : <ArrowRightIcon size={18} strokeWidth={2.2} color={text.trim() ? C.white : C.textMuted} />}
+              </StyledPressable>
             </Stack>
           </Stack>
-        </Stack>
+        </StyledCard>
 
         {/* Result */}
         {result && (
-          <ResultCard
-            result={result}
-            onSave={handleSave}
-            onCopy={handleCopyResult}
-            onListen={handleListen}
-            onExplain={handleExplain}
-          />
+          <StyledCard
+            backgroundColor={C.primaryBg} borderRadius={20} padding={18} marginTop={12}
+            borderWidth={1} borderColor={C.border}
+          >
+            <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>
+              {getLang(result.target_lang).label.toUpperCase()}
+            </Text>
+            <Text variant="title" color={C.textPrimary} style={{ lineHeight: 30, marginBottom: 14 }}>
+              {result.translated_text}
+            </Text>
+            <Stack horizontal gap={8} flexWrap="wrap">
+              <ActionChip icon={SpeakerIcon} label="Listen" loading={ttsLoading}
+                onPress={() => speak(result.translated_text, result.target_lang)} />
+              <ActionChip icon={CopyIcon} label="Copy" onPress={handleCopy} />
+              <ActionChip icon={BookmarkIcon} label="Save" onPress={() => saveToPhrasebook(result)} />
+            </Stack>
+          </StyledCard>
         )}
 
         {/* Quick phrases */}
         {!result && !text && (
           <Stack marginTop={24}>
-            <Text variant="label" color={C.textSecondary} fontWeight="700" style={{ letterSpacing: 0.8 }} marginBottom={12}>
-              QUICK PHRASES
-            </Text>
+            <SectionLabel>Quick phrases</SectionLabel>
             <Stack gap={8}>
               {QUICK_PHRASES.map(({ emoji, text: phrase }) => (
-                <TouchableOpacity
-                  key={phrase}
-                  onPress={() => { setText(phrase); setTimeout(handleTranslate, 50) }}
-                  activeOpacity={0.7}
+                <StyledPressable key={phrase} onPress={() => handleQuickPhrase(phrase)}
+                  accessibilityRole="button" accessibilityLabel={`Translate: ${phrase}`}
                 >
-                  <Stack
-                    backgroundColor={C.bgCard}
-                    borderRadius={14}
-                    padding={14}
-                    horizontal
-                    alignItems="center"
-                    gap={12}
-                    style={{ borderWidth: 1, borderColor: C.border }}
+                  <StyledCard
+                    flexDirection="row" alignItems="center" gap={12}
+                    backgroundColor={C.bgCard} borderRadius={14} padding={14}
+                    borderWidth={1} borderColor={C.border}
                   >
                     <Text style={{ fontSize: 20 }}>{emoji}</Text>
                     <Text variant="body" color={C.textPrimary} style={{ flex: 1 }}>{phrase}</Text>
-                    <Feather name="arrow-right" size={14} color={C.primary} />
-                  </Stack>
-                </TouchableOpacity>
+                    <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />
+                  </StyledCard>
+                </StyledPressable>
               ))}
             </Stack>
           </Stack>
         )}
-      </ScrollView>
+      </StyledScrollView>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  langBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1,
-  },
-  swapBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
-  },
-  toneChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-  },
-  actionChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 12, borderWidth: 1,
-  },
-  translateBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  settingsBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
-  },
-})

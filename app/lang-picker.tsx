@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { Platform, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
-import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
+import { Platform, TextInput, FlatList } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
+import { StyledPage, Stack, StyledCard, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
+import { ScreenHeader } from '../src/components/ScreenHeader'
+import { EmptyState } from '../src/components/EmptyState'
+import { goBack } from '../src/utils'
+import { SearchIcon, XCircleIcon, CheckIcon } from '../src/icons'
 import { useColors, useIsDark, LANGUAGES } from '../src/constants'
 import { useTranslatorStore } from '../src/stores'
 
@@ -28,120 +31,79 @@ export default function LangPickerScreen() {
   const handleSelect = (code: string) => {
     if (side === 'source') setSource(code)
     else setTarget(code)
-    router.back()
+    goBack()
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage flex={1} backgroundColor={C.bg}
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      {/* Header */}
-      <Stack
-        horizontal alignItems="center" gap={12}
-        paddingHorizontal={16} paddingTop={Platform.OS === 'ios' ? 56 : 20} paddingBottom={12}
-        backgroundColor={C.bg}
-        style={{ borderBottomWidth: 1, borderBottomColor: C.border }}
-      >
-        <StyledPressable onPress={() => router.back()} hitSlop={10}>
-          <Feather name="x" size={22} color={C.textPrimary} />
-        </StyledPressable>
-        <Text variant="title" color={C.textPrimary} fontWeight="800" style={{ flex: 1 }}>
-          {side === 'source' ? 'Translate from' : 'Translate to'}
-        </Text>
-      </Stack>
+      <ScreenHeader
+        title={side === 'source' ? 'Translate from' : 'Translate to'}
+        onBackPress={() => goBack()}
+        marginTop={16}
+      />
 
-      {/* Search bar */}
-      <Stack
-        margin={16} marginBottom={8} horizontal alignItems="center" gap={10}
-        backgroundColor={C.bgCard} borderRadius={16} paddingHorizontal={14} paddingVertical={10}
-        style={{ borderWidth: 1, borderColor: C.border }}
+      {/* Search */}
+      <StyledCard
+        flexDirection="row" alignItems="center" gap={10}
+        marginHorizontal={16} marginTop={12} marginBottom={8}
+        backgroundColor={C.bgCard} borderRadius={14} paddingHorizontal={14} paddingVertical={10}
+        borderWidth={1} borderColor={C.border}
       >
-        <Feather name="search" size={18} color={C.textMuted} />
+        <SearchIcon size={18} strokeWidth={2} color={C.textMuted} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search languages…"
           placeholderTextColor={C.textMuted}
           autoFocus
-          style={{
-            flex: 1,
-            fontFamily: 'PlusJakartaSans_400Regular',
-            fontSize: 15,
-            color: C.textPrimary,
-          }}
+          style={{ flex: 1, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, color: C.textPrimary }}
         />
         {!!query && (
-          <StyledPressable onPress={() => setQuery('')} hitSlop={8}>
-            <Feather name="x-circle" size={16} color={C.textMuted} />
+          <StyledPressable onPress={() => setQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
+            <XCircleIcon size={16} strokeWidth={2} color={C.textMuted} />
           </StyledPressable>
         )}
-      </Stack>
+      </StyledCard>
 
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.code}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
-          const isSelected = item.code === current
+          const selected = item.code === current
           return (
-            <TouchableOpacity
-              onPress={() => handleSelect(item.code)}
-              activeOpacity={0.7}
+            <StyledPressable onPress={() => handleSelect(item.code)}
+              accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={item.label}
             >
-              <Stack
-                horizontal alignItems="center" gap={14}
-                paddingVertical={14} paddingHorizontal={16}
-                marginBottom={6} borderRadius={16}
-                backgroundColor={isSelected ? C.primaryBg : C.bgCard}
-                style={[
-                  { borderWidth: 1, borderColor: isSelected ? `${C.primary}40` : C.border },
-                  isSelected && styles.selectedShadow,
-                ]}
+              <StyledCard
+                flexDirection="row" alignItems="center" gap={14}
+                paddingVertical={13} paddingHorizontal={16} marginBottom={6} borderRadius={14}
+                backgroundColor={selected ? C.primaryBg : C.bgCard}
+                borderWidth={1} borderColor={selected ? C.primary : C.border}
               >
                 <Text style={{ fontSize: 26 }}>{item.flag}</Text>
                 <Stack flex={1}>
-                  <Text variant="body" color={C.textPrimary} fontWeight={isSelected ? '700' : '500'}>
-                    {item.label}
-                  </Text>
-                  <Text variant="caption" color={C.textMuted} style={{ marginTop: 1 }}>
-                    {item.code.toUpperCase()}
-                  </Text>
+                  <Text variant="label" color={C.textPrimary} fontWeight={selected ? '700' : '500'}>{item.label}</Text>
+                  <Text variant="caption" color={C.textMuted} style={{ marginTop: 1 }}>{item.code.toUpperCase()}</Text>
                 </Stack>
-                {isSelected && (
-                  <Stack
-                    width={24} height={24} borderRadius={12}
-                    alignItems="center" justifyContent="center"
-                    backgroundColor={C.primary}
-                  >
-                    <Feather name="check" size={14} color="#FFF" />
+                {selected && (
+                  <Stack width={24} height={24} borderRadius={12} alignItems="center" justifyContent="center" backgroundColor={C.primary}>
+                    <CheckIcon size={14} strokeWidth={2.6} color={C.white} />
                   </Stack>
                 )}
-              </Stack>
-            </TouchableOpacity>
+              </StyledCard>
+            </StyledPressable>
           )
         }}
         ListEmptyComponent={
-          <Stack alignItems="center" justifyContent="center" paddingTop={60} gap={12}>
-            <Text style={{ fontSize: 36 }}>🔍</Text>
-            <Text variant="body" color={C.textSecondary} textAlign="center">
-              No language matching "{query}"
-            </Text>
-          </Stack>
+          <EmptyState icon={SearchIcon} title="No languages found" subtitle={`Nothing matches "${query}"`} />
         }
       />
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  selectedShadow: {
-    shadowColor: '#14B8A6',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-})

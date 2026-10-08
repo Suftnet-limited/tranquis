@@ -246,6 +246,8 @@ export const translateService = {
 
   deleteHistory: (id: string) => api.delete(`/api/v1/translate/history/${id}`),
 
+  clearHistory: () => api.delete('/api/v1/translate/history'),
+
   // The backend copies the phrase from the translation; saving twice returns the same phrase
   saveToPhrasebook: (translationId: string) =>
     api.post<any>('/api/v1/phrasebook', { translation_id: translationId }),

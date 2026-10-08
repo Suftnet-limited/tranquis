@@ -1,7 +1,7 @@
 import React from 'react'
 import { Platform, Linking, KeyboardAvoidingView } from 'react-native'
-import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
+import { XIcon, LockIcon } from '../../src/icons'
+import { goBack } from '../../src/utils'
 import { StyledPage, StyledScrollView, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
 import { AuthBackground, GradientButton } from '../../src/components/AuthUI'
@@ -24,8 +24,8 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Stack marginBottom={12} horizontal alignItems="center">
-            <StyledPressable onPress={() => router.back()} hitSlop={10}>
-              <Feather name="x" size={22} color={C.textPrimary} />
+            <StyledPressable onPress={() => goBack('/auth/login')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+              <XIcon size={22} strokeWidth={2.2} color={C.textPrimary} />
             </StyledPressable>
           </Stack>
 
@@ -40,7 +40,7 @@ export default function ForgotPasswordScreen() {
               backgroundColor={C.primaryBg}
               style={{ borderWidth: 1, borderColor: `${C.primary}30` }}
             >
-              <Feather name="lock" size={28} color={C.primary} />
+              <LockIcon size={28} strokeWidth={1.8} color={C.primary} />
             </Stack>
             <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
               Reset password
@@ -52,7 +52,7 @@ export default function ForgotPasswordScreen() {
               label="Email support@tranquis.com"
               onPress={() => Linking.openURL('mailto:support@tranquis.com?subject=Password%20reset%20request')}
             />
-            <StyledPressable onPress={() => router.back()} hitSlop={8}>
+            <StyledPressable onPress={() => goBack('/auth/login')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back to sign in">
               <Text variant="bodySmall" color={C.textMuted} fontWeight="600">Back to sign in</Text>
             </StyledPressable>
           </Stack>

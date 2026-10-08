@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { Platform, KeyboardAvoidingView, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
+import { Platform, KeyboardAvoidingView } from 'react-native'
 import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
-import { StyledPage, StyledScrollView, Stack } from 'fluent-styles'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, StyledForm } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
-import { AuthBackground, GradientButton } from '../../src/components/AuthUI'
-import { useColors, useIsDark } from '../../src/constants'
+import { AuthBackground, BrandMark, GradientButton, OrDivider, EyeToggle, EMAIL_RE } from '../../src/components/AuthUI'
+import { useColors, useIsDark, getFieldColors } from '../../src/constants'
 import { useAuth } from '../../src/hooks'
+import { UserIcon, MailIcon, LockIcon } from '../../src/icons'
+
+// Matches the backend's rule (auth/register rejects shorter passwords)
+const MIN_PASSWORD = 8
 
 export default function RegisterScreen() {
   const C      = useColors()
@@ -16,7 +19,19 @@ export default function RegisterScreen() {
   const [name,     setName]     = useState('')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [showPwd,  setShowPwd]  = useState(false)
+  const [showPw,   setShowPw]   = useState(false)
+  const [tried,    setTried]    = useState(false)
+
+  const FC = getFieldColors(C)
+  const nameError  = tried && !name.trim() ? 'Enter your name' : undefined
+  const emailError = tried && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined
+  const pwError    = tried && password.length < MIN_PASSWORD ? `Use at least ${MIN_PASSWORD} characters` : undefined
+
+  const submit = () => {
+    setTried(true)
+    if (!name.trim() || !EMAIL_RE.test(email.trim()) || password.length < MIN_PASSWORD) return
+    register(email.trim(), password, name.trim())
+  }
 
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
@@ -30,126 +45,79 @@ export default function RegisterScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Brand */}
-          <Stack alignItems="center" marginBottom={32}>
-            <Stack
-              width={72} height={72} borderRadius={36}
-              alignItems="center" justifyContent="center"
-              backgroundColor={C.primaryBg}
-              style={{ borderWidth: 2, borderColor: `${C.primary}40`, marginBottom: 16 }}
-            >
-              <Text style={{ fontSize: 32 }}>🌍</Text>
-            </Stack>
-            <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
-              Create account
-            </Text>
-            <Text variant="body" color={C.textSecondary} textAlign="center" style={{ marginTop: 6 }}>
-              Start translating in seconds
-            </Text>
+          <Stack marginBottom={32}>
+            <BrandMark title="Create account" subtitle="Start translating in seconds" />
           </Stack>
 
-          {/* Card */}
-          <Stack
-            backgroundColor={C.bgCard} borderRadius={22} padding={24} gap={16}
-            style={{ borderWidth: 1, borderColor: C.border }}
+          <StyledCard backgroundColor={C.bgCard} borderRadius={22} padding={20} marginBottom={18}
+            borderWidth={1} borderColor={C.border}
+            style={{ shadowColor: C.primary, shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 }}
           >
-            {/* Name */}
-            <Stack gap={8}>
-              <Text variant="caption" color={C.textSecondary} fontWeight="700">Full name</Text>
-              <Stack
-                horizontal alignItems="center"
-                backgroundColor={C.bg} borderRadius={14} paddingHorizontal={14}
-                style={{ borderWidth: 1, borderColor: C.border, height: 52 }}
-              >
-                <Feather name="user" size={16} color={C.textMuted} style={{ marginRight: 10 }} />
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Your name"
-                  placeholderTextColor={C.textMuted}
-                  autoCapitalize="words"
-                  style={[styles.input, { color: C.textPrimary }]}
-                />
-              </Stack>
+            <Stack gap={16}>
+              <StyledForm.Input
+                label="Full name"
+                placeholder="Your name"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                returnKeyType="next"
+                errorMessage={nameError}
+                leftIcon={<UserIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
+                focusColor={C.primary}
+                colors={FC}
+              />
+              <StyledForm.Input
+                label="Email address"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                errorMessage={emailError}
+                leftIcon={<MailIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
+                focusColor={C.primary}
+                colors={FC}
+              />
+              <StyledForm.Input
+                label="Password"
+                placeholder={`At least ${MIN_PASSWORD} characters`}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPw}
+                returnKeyType="go"
+                onSubmitEditing={submit}
+                errorMessage={pwError}
+                leftIcon={<LockIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
+                rightIcon={<EyeToggle shown={showPw} onPress={() => setShowPw((v) => !v)} />}
+                focusColor={C.primary}
+                colors={FC}
+              />
             </Stack>
+          </StyledCard>
 
-            {/* Email */}
-            <Stack gap={8}>
-              <Text variant="caption" color={C.textSecondary} fontWeight="700">Email</Text>
-              <Stack
-                horizontal alignItems="center"
-                backgroundColor={C.bg} borderRadius={14} paddingHorizontal={14}
-                style={{ borderWidth: 1, borderColor: C.border, height: 52 }}
-              >
-                <Feather name="mail" size={16} color={C.textMuted} style={{ marginRight: 10 }} />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor={C.textMuted}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={[styles.input, { color: C.textPrimary }]}
-                />
-              </Stack>
-            </Stack>
+          <GradientButton label="Create account" loading={loading} onPress={submit} />
 
-            {/* Password */}
-            <Stack gap={8}>
-              <Text variant="caption" color={C.textSecondary} fontWeight="700">Password</Text>
-              <Stack
-                horizontal alignItems="center"
-                backgroundColor={C.bg} borderRadius={14} paddingHorizontal={14}
-                style={{ borderWidth: 1, borderColor: C.border, height: 52 }}
-              >
-                <Feather name="lock" size={16} color={C.textMuted} style={{ marginRight: 10 }} />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Min 8 characters"
-                  placeholderTextColor={C.textMuted}
-                  secureTextEntry={!showPwd}
-                  style={[styles.input, { color: C.textPrimary }]}
-                />
-                <TouchableOpacity onPress={() => setShowPwd(v => !v)} activeOpacity={0.7}>
-                  <Feather name={showPwd ? 'eye-off' : 'eye'} size={16} color={C.textMuted} />
-                </TouchableOpacity>
-              </Stack>
-            </Stack>
-
-            {/* Submit */}
-            <GradientButton
-              label={loading ? 'Creating account…' : 'Create account'}
-              onPress={() => register(email.trim(), password, name.trim())}
-              disabled={loading || !name.trim() || !email.trim() || !password}
-            />
-
-            {/* Terms */}
-            <Text variant="caption" color={C.textMuted} textAlign="center" style={{ lineHeight: 18 }}>
-              By signing up you agree to our{' '}
-              <Text variant="caption" color={C.primary} fontWeight="600">Terms of Use</Text>
-              {' '}and{' '}
-              <Text variant="caption" color={C.primary} fontWeight="600">Privacy Policy</Text>
+          <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 14, lineHeight: 18 }}>
+            By signing up you agree to our{' '}
+            <Text variant="caption" color={C.primary} fontWeight="600" onPress={() => router.push('/privacy' as any)}>
+              Privacy Policy
             </Text>
-          </Stack>
+          </Text>
 
-          {/* Login link */}
-          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={24}>
-            <Text variant="body" color={C.textSecondary}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => router.replace('/auth/login' as any)} activeOpacity={0.7}>
-              <Text variant="body" color={C.primary} fontWeight="700">Sign in</Text>
-            </TouchableOpacity>
+          <OrDivider />
+
+          <Stack horizontal alignItems="center" justifyContent="center" gap={5}>
+            <Text variant="bodySmall" color={C.textSecondary}>Already have an account?</Text>
+            <StyledPressable onPress={() => router.replace('/auth/login' as any)}
+              accessibilityRole="button" accessibilityLabel="Sign in"
+            >
+              <Text variant="bodySmall" color={C.primary} fontWeight="700">Sign in</Text>
+            </StyledPressable>
           </Stack>
         </StyledScrollView>
       </KeyboardAvoidingView>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  input: {
-    flex: 1, height: 52,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 15,
-  },
-})

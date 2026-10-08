@@ -1,0 +1,1 @@
+export { goBack } from './navigation'

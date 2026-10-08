@@ -40,6 +40,11 @@ export const LightColors = {
   error:     '#791F1F',  errorBg:   '#FCEBEB',
   warning:   '#854F0B',  warningBg: '#FAEEDA',
 
+  // Accents used by the translate screens
+  accent:    '#7C3AED',  accentBg:  '#F5F3FF',   // tone chips, translation bubbles
+  live:      '#22C55E',                          // recording / live indicators
+  danger:    '#EF4444',  dangerBg:  '#FEF2F2',   // stop recording, destructive actions
+
   // Misc
   border:      '#D1E0DC',
   borderFocus: '#14B8A6',
@@ -79,6 +84,10 @@ export const DarkColors: typeof LightColors = {
   success:   '#4ADE80', successBg: 'rgba(74,222,128,0.14)',
   error:     '#F1726F', errorBg:   'rgba(241,114,111,0.14)',
   warning:   '#F0B255', warningBg: 'rgba(240,178,85,0.14)',
+
+  accent:    '#A78BFA', accentBg:  'rgba(139,92,246,0.16)',
+  live:      '#4ADE80',
+  danger:    '#F87171', dangerBg:  'rgba(248,113,113,0.14)',
 
   border:      '#1E3330',
   borderFocus: '#2DD4BF',

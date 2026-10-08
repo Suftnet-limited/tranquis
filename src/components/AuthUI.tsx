@@ -1,7 +1,7 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle } from 'react-native-svg'
-import { Feather } from '@expo/vector-icons'
+import { ArrowRightIcon, EyeIcon, EyeOffIcon } from '../icons'
 import { Stack, StyledPressable } from 'fluent-styles'
 import { Text } from './Text'
 import { useColors } from '../constants'
@@ -91,19 +91,19 @@ export function GradientButton({ label, onPress, loading, disabled, arrow = true
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none">
         <Defs>
           <LinearGradient id="tranquis-btn" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#2DD4BF" />
-            <Stop offset="1" stopColor="#0D9488" />
+            <Stop offset="0" stopColor={C.primary} />
+            <Stop offset="1" stopColor={C.primaryDark} />
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#tranquis-btn)" />
       </Svg>
       <Stack horizontal alignItems="center" justifyContent="center" paddingHorizontal={20}>
         {loading
-          ? <ActivityIndicator color="#FFFFFF" />
-          : <Text variant="button" color="#FFFFFF">{label}</Text>}
+          ? <ActivityIndicator color={C.white} />
+          : <Text variant="button" color={C.white}>{label}</Text>}
         {arrow && !loading && (
           <Stack position="absolute" right={20}>
-            <Feather name="arrow-right" size={20} color="#FFFFFF" />
+            <ArrowRightIcon size={20} strokeWidth={2.2} color={C.white} />
           </Stack>
         )}
       </Stack>
@@ -127,8 +127,10 @@ export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 export function EyeToggle({ shown, onPress }: { shown: boolean; onPress: () => void }) {
   const C = useColors()
   return (
-    <StyledPressable onPress={onPress} hitSlop={10} style={{ paddingHorizontal: 6 }}>
-      <Feather name={shown ? 'eye-off' : 'eye'} size={18} color={C.textSecondary} />
+    <StyledPressable onPress={onPress} hitSlop={10} style={{ paddingHorizontal: 6 }}
+      accessibilityRole="button" accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+    >
+      {shown ? <EyeOffIcon size={18} strokeWidth={1.8} color={C.textSecondary} /> : <EyeIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
     </StyledPressable>
   )
 }

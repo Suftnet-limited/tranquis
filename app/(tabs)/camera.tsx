@@ -1,15 +1,26 @@
 import React, { useState } from 'react'
-import { Platform, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import { Platform, StyleSheet, Image, ActivityIndicator } from 'react-native'
+import { router } from 'expo-router'
 import * as ExpoClipboard from 'expo-clipboard'
 import * as ImagePicker from 'expo-image-picker'
-import { StyledPage, Stack, toastService } from 'fluent-styles'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toastService } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
-import { useColors, useIsDark } from '../../src/constants'
+import { ScreenHeader } from '../../src/components/ScreenHeader'
+import { ActionChip } from '../../src/components/ActionChip'
+import { SectionLabel } from '../../src/components/SectionLabel'
+import { useColors, useIsDark, getLang } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { useTranslate, useTTS } from '../../src/hooks'
+import {
+  CameraIcon, ImageIcon, ZapIcon, XIcon, GlobeIcon, CopyIcon, SpeakerIcon, BookmarkIcon,
+  SunIcon, CropIcon, TypeIcon, type IconComponent,
+} from '../../src/icons'
 
-type Mode = 'gallery' | 'capture' | 'live'
+const TIPS: { Icon: IconComponent; tip: string }[] = [
+  { Icon: SunIcon,  tip: 'Good lighting gives better results' },
+  { Icon: CropIcon, tip: 'Crop tightly around the text' },
+  { Icon: TypeIcon, tip: 'Works best with printed text' },
+]
 
 export default function CameraScreen() {
   const C      = useColors()
@@ -23,7 +34,6 @@ export default function CameraScreen() {
   const [base64,    setBase64]    = useState<string | null>(null)
   const [mimeType,  setMimeType]  = useState('image/jpeg')
   const [liveMode,  setLiveMode]  = useState(false)
-  const [activeMode, setActiveMode] = useState<Mode>('capture')
 
   const handleAsset = async (res: ImagePicker.ImagePickerResult) => {
     if (res.canceled || !res.assets[0]) return
@@ -88,286 +98,187 @@ export default function CameraScreen() {
     speak(result.translated_text, result.target_lang)
   }
 
+  const captureLabel = imageUri ? (base64 && !result && !loading ? 'Translate' : 'Retake') : 'Capture & Translate'
+
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Stack horizontal alignItems="center" justifyContent="space-between" marginBottom={20} marginTop={8}>
-          <Text variant="title" color={C.textPrimary} fontWeight="800">Camera</Text>
-          <Stack
-            horizontal alignItems="center" gap={6}
-            backgroundColor={C.primaryBg} borderRadius={10}
-            paddingHorizontal={10} paddingVertical={6}
-            style={{ borderWidth: 1, borderColor: `${C.primary}30` }}
+      <ScreenHeader
+        title="Camera"
+        variant="large"
+        onBackPress={() => router.push('/(tabs)' as any)}
+        rightIcon={
+          <Stack horizontal alignItems="center" gap={6}
+            backgroundColor={C.primaryBg} borderRadius={10} paddingHorizontal={10} paddingVertical={6}
           >
-            <Feather name="globe" size={13} color={C.primary} />
-            <Text variant="caption" color={C.primary} fontWeight="700">{targetLang.toUpperCase()}</Text>
+            <GlobeIcon size={13} strokeWidth={2} color={C.primary} />
+            <Text variant="caption" color={C.primary} fontWeight="700">{getLang(targetLang).label}</Text>
           </Stack>
-        </Stack>
+        }
+      />
 
+      <StyledScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 40 }}>
         {/* Viewfinder */}
-        {imageUri ? (
-          <Stack borderRadius={20} overflow="hidden" marginBottom={16}
-            style={{ borderWidth: 1, borderColor: C.border }}
-          >
-            <Image source={{ uri: imageUri }} style={{ width: '100%', height: 260 }} resizeMode="cover" />
+        <Stack height={260} borderRadius={20} overflow="hidden" marginBottom={16}
+          backgroundColor={C.navy} borderWidth={1} borderColor={C.border}
+          alignItems="center" justifyContent="center"
+        >
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : (
+            <>
+              {/* Corner markers */}
+              {(['tl', 'tr', 'bl', 'br'] as const).map((pos) => (
+                <Stack key={pos} position="absolute"
+                  top={pos.startsWith('t') ? 16 : undefined}
+                  bottom={pos.startsWith('b') ? 16 : undefined}
+                  left={pos.endsWith('l') ? 16 : undefined}
+                  right={pos.endsWith('r') ? 16 : undefined}
+                  width={26} height={26}
+                  style={{
+                    borderColor: C.primary,
+                    borderTopWidth:    pos.startsWith('t') ? 3 : 0,
+                    borderBottomWidth: pos.startsWith('b') ? 3 : 0,
+                    borderLeftWidth:   pos.endsWith('l') ? 3 : 0,
+                    borderRightWidth:  pos.endsWith('r') ? 3 : 0,
+                    borderTopLeftRadius:     pos === 'tl' ? 5 : 0,
+                    borderTopRightRadius:    pos === 'tr' ? 5 : 0,
+                    borderBottomLeftRadius:  pos === 'bl' ? 5 : 0,
+                    borderBottomRightRadius: pos === 'br' ? 5 : 0,
+                  }}
+                />
+              ))}
+              <Stack alignItems="center" gap={14}>
+                <Stack width={72} height={72} borderRadius={36} alignItems="center" justifyContent="center"
+                  backgroundColor={C.primaryBg}
+                >
+                  <CameraIcon size={30} strokeWidth={1.8} color={C.primary} />
+                </Stack>
+                <Stack alignItems="center" gap={4}>
+                  <Text variant="label" color={C.textOnDark}>Point at text to translate</Text>
+                  <Text variant="caption" color={C.textMuted}>Signs, menus, documents, labels</Text>
+                </Stack>
+              </Stack>
+            </>
+          )}
 
-            {/* Live translate pill overlay */}
-            <Stack
-              position="absolute" top={14} alignSelf="center"
+          {/* Live mode badge */}
+          {liveMode && (
+            <Stack position="absolute" top={14} alignSelf="center"
               horizontal alignItems="center" gap={6}
-              backgroundColor="rgba(0,0,0,0.7)" borderRadius={20}
-              paddingHorizontal={14} paddingVertical={7}
+              backgroundColor="rgba(0,0,0,0.6)" borderRadius={20} paddingHorizontal={14} paddingVertical={7}
             >
-              <Stack width={7} height={7} borderRadius={3.5} backgroundColor="#22C55E" />
-              <Text variant="caption" color="#FFF" fontWeight="700">Live Translate</Text>
+              <Stack width={7} height={7} borderRadius={3.5} backgroundColor={C.live} />
+              <Text variant="caption" color={C.white} fontWeight="700">Live mode</Text>
             </Stack>
+          )}
 
-            {/* Close */}
-            <Stack position="absolute" top={12} right={12}
-              backgroundColor="rgba(0,0,0,0.55)" borderRadius={10} padding={8}
+          {/* Clear the photo */}
+          {imageUri && !loading && (
+            <StyledPressable position="absolute" top={12} right={12}
+              width={36} height={36} borderRadius={18} alignItems="center" justifyContent="center"
+              backgroundColor="rgba(0,0,0,0.55)"
+              onPress={clearImage} accessibilityRole="button" accessibilityLabel="Remove photo"
             >
-              <TouchableOpacity onPress={clearImage}>
-                <Feather name="x" size={18} color="#FFF" />
-              </TouchableOpacity>
-            </Stack>
+              <XIcon size={18} strokeWidth={2.2} color={C.white} />
+            </StyledPressable>
+          )}
 
-            {/* Processing overlay while the photo is read and translated */}
-            {loading && (
-              <Stack position="absolute" style={StyleSheet.absoluteFill}
-                alignItems="center" justifyContent="center"
-                backgroundColor="rgba(0,0,0,0.55)"
-              >
-                <ActivityIndicator size="large" color="#14B8A6" />
-                <Text variant="caption" color="#FFF" style={{ marginTop: 12 }}>Translating…</Text>
-              </Stack>
-            )}
-          </Stack>
-        ) : (
-          <Stack
-            borderRadius={20} marginBottom={16} alignItems="center" justifyContent="center"
-            style={[styles.viewfinder, { backgroundColor: '#0F172A', borderColor: C.border }]}
-          >
-            {/* Corner markers */}
-            {(['tl','tr','bl','br'] as const).map((pos) => (
-              <Stack key={pos} position="absolute"
-                top={pos.startsWith('t') ? 16 : undefined}
-                bottom={pos.startsWith('b') ? 16 : undefined}
-                left={pos.endsWith('l') ? 16 : undefined}
-                right={pos.endsWith('r') ? 16 : undefined}
-                width={26} height={26}
-                style={{
-                  borderTopWidth:    pos.startsWith('t') ? 3 : 0,
-                  borderBottomWidth: pos.startsWith('b') ? 3 : 0,
-                  borderLeftWidth:   pos.endsWith('l') ? 3 : 0,
-                  borderRightWidth:  pos.endsWith('r') ? 3 : 0,
-                  borderColor: C.primary,
-                  borderTopLeftRadius:     pos === 'tl' ? 5 : 0,
-                  borderTopRightRadius:    pos === 'tr' ? 5 : 0,
-                  borderBottomLeftRadius:  pos === 'bl' ? 5 : 0,
-                  borderBottomRightRadius: pos === 'br' ? 5 : 0,
-                }}
-              />
-            ))}
-
-            {/* Live translate pill */}
-            <Stack
-              position="absolute" top={14} alignSelf="center"
-              horizontal alignItems="center" gap={6}
-              backgroundColor="rgba(0,0,0,0.6)" borderRadius={20}
-              paddingHorizontal={14} paddingVertical={7}
+          {/* Processing overlay while the photo is read and translated */}
+          {loading && (
+            <Stack position="absolute" style={StyleSheet.absoluteFill}
+              alignItems="center" justifyContent="center" backgroundColor="rgba(0,0,0,0.55)"
             >
-              <Stack width={7} height={7} borderRadius={3.5} backgroundColor="#22C55E" />
-              <Text variant="caption" color="#FFF" fontWeight="700">Live Translate</Text>
+              <ActivityIndicator size="large" color={C.primary} />
+              <Text variant="caption" color={C.white} style={{ marginTop: 12 }}>Translating…</Text>
             </Stack>
-
-            <Stack alignItems="center" gap={14} marginTop={24}>
-              <Stack
-                width={72} height={72} borderRadius={36}
-                alignItems="center" justifyContent="center"
-                backgroundColor={`${C.primary}20`}
-                style={{ borderWidth: 1, borderColor: `${C.primary}40` }}
-              >
-                <Feather name="camera" size={30} color={C.primary} />
-              </Stack>
-              <Stack alignItems="center" gap={4}>
-                <Text variant="body" color="#94A3B8" fontWeight="600">Point at text to translate</Text>
-                <Text variant="caption" color="#64748B">Signs, menus, documents, labels</Text>
-              </Stack>
-            </Stack>
-          </Stack>
-        )}
-
-        {/* Three-button row: Gallery | Capture & Translate | Live */}
-        <Stack horizontal gap={10} marginBottom={20}>
-          {/* Gallery */}
-          <TouchableOpacity
-            style={[styles.modeBtn, { backgroundColor: C.bgCard, borderColor: C.border, flex: 1 }]}
-            onPress={handlePickGallery}
-            activeOpacity={0.7}
-          >
-            <Feather name="image" size={18} color={C.primary} />
-            <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginTop: 4 }}>
-              Gallery
-            </Text>
-          </TouchableOpacity>
-
-          {/* Capture & Translate — teal, wider */}
-          <TouchableOpacity
-            style={[styles.modeBtn, { backgroundColor: C.primary, borderColor: C.primary, flex: 1.6 }]}
-            onPress={handleCapture}
-            activeOpacity={0.7}
-          >
-            <Feather name="camera" size={20} color="#FFF" />
-            <Text variant="caption" color="#FFF" fontWeight="700" style={{ marginTop: 4 }}>
-              {imageUri ? (base64 && !result && !loading ? 'Translate' : 'Retake') : 'Capture & Translate'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Live */}
-          <TouchableOpacity
-            style={[
-              styles.modeBtn,
-              {
-                backgroundColor: liveMode ? `${C.primary}20` : C.bgCard,
-                borderColor: liveMode ? C.primary : C.border,
-                flex: 1,
-              },
-            ]}
-            onPress={handleLive}
-            activeOpacity={0.7}
-          >
-            <Feather name="zap" size={18} color={liveMode ? C.primary : C.textSecondary} />
-            <Text
-              variant="caption"
-              color={liveMode ? C.primary : C.textPrimary}
-              fontWeight="600"
-              style={{ marginTop: 4 }}
-            >
-              Live
-            </Text>
-          </TouchableOpacity>
+          )}
         </Stack>
 
-        {/* Result card */}
-        {result && (
-          <Stack
-            backgroundColor={C.bgCard} borderRadius={20} padding={18} marginBottom={16}
-            style={{ borderWidth: 1, borderColor: C.border }}
+        {/* Gallery | Capture & Translate | Live */}
+        <Stack horizontal gap={10} marginBottom={20}>
+          <StyledPressable flex={1} onPress={handlePickGallery} disabled={loading}
+            accessibilityRole="button" accessibilityLabel="Pick from gallery"
           >
-            {/* Detected text */}
-            <Text
-              variant="caption"
-              color={C.textMuted}
-              fontWeight="700"
-              style={{ letterSpacing: 0.8, marginBottom: 6 }}
+            <StyledCard alignItems="center" justifyContent="center" paddingVertical={14} borderRadius={16}
+              backgroundColor={C.bgCard} borderWidth={1} borderColor={C.border}
             >
-              DETECTED TEXT
-            </Text>
-            <Stack
-              backgroundColor={C.bg} borderRadius={12} padding={12} marginBottom={14}
-              style={{ borderWidth: 1, borderColor: C.border }}
+              <ImageIcon size={18} strokeWidth={2} color={C.primary} />
+              <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginTop: 4 }}>Gallery</Text>
+            </StyledCard>
+          </StyledPressable>
+
+          <StyledPressable flex={1.6} onPress={handleCapture} disabled={loading}
+            accessibilityRole="button" accessibilityLabel={captureLabel}
+          >
+            <Stack alignItems="center" justifyContent="center" paddingVertical={14} borderRadius={16}
+              backgroundColor={C.primary}
+              style={{ shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 }}
             >
-              <Text variant="bodySmall" color={C.textSecondary}>
-                {(result as any).source_text ?? '—'}
-              </Text>
+              <CameraIcon size={20} strokeWidth={2} color={C.white} />
+              <Text variant="caption" color={C.white} fontWeight="700" style={{ marginTop: 4 }}>{captureLabel}</Text>
+            </Stack>
+          </StyledPressable>
+
+          <StyledPressable flex={1} onPress={handleLive}
+            accessibilityRole="button" accessibilityState={{ selected: liveMode }} accessibilityLabel="Live mode"
+          >
+            <StyledCard alignItems="center" justifyContent="center" paddingVertical={14} borderRadius={16}
+              backgroundColor={liveMode ? C.primaryBg : C.bgCard}
+              borderWidth={1} borderColor={liveMode ? C.primary : C.border}
+            >
+              <ZapIcon size={18} strokeWidth={2} color={liveMode ? C.primary : C.textSecondary} />
+              <Text variant="caption" color={liveMode ? C.primary : C.textPrimary} fontWeight="600" style={{ marginTop: 4 }}>Live</Text>
+            </StyledCard>
+          </StyledPressable>
+        </Stack>
+
+        {/* Result */}
+        {result && (
+          <StyledCard backgroundColor={C.bgCard} borderRadius={20} padding={18} marginBottom={16}
+            borderWidth={1} borderColor={C.border} shadow="light"
+          >
+            <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 0.8, marginBottom: 6 }}>DETECTED TEXT</Text>
+            <Stack backgroundColor={C.bgInput} borderRadius={12} padding={12} marginBottom={14}>
+              <Text variant="bodySmall" color={C.textSecondary}>{result.source_text ?? '—'}</Text>
             </Stack>
 
-            {/* Translation */}
-            <Text
-              variant="caption"
-              color={C.primary}
-              fontWeight="700"
-              style={{ letterSpacing: 0.8, marginBottom: 6 }}
-            >
-              TRANSLATION
-            </Text>
+            <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>TRANSLATION</Text>
             <Text variant="title" color={C.textPrimary} style={{ lineHeight: 30, marginBottom: 14 }}>
               {result.translated_text}
             </Text>
 
-            {/* Actions */}
-            <Stack horizontal gap={10}>
-              <TouchableOpacity
-                onPress={handleCopyResult}
-                activeOpacity={0.7}
-                style={[styles.chipBtn, { backgroundColor: C.bgInput, borderColor: C.border }]}
-              >
-                <Feather name="copy" size={13} color={C.primary} />
-                <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginLeft: 5 }}>Copy all</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleListenResult}
-                disabled={ttsLoading}
-                activeOpacity={0.7}
-                style={[styles.chipBtn, { backgroundColor: C.bgInput, borderColor: C.border, opacity: ttsLoading ? 0.6 : 1 }]}
-              >
-                {ttsLoading
-                  ? <ActivityIndicator size="small" color={C.primary} style={{ transform: [{ scale: 0.7 }] }} />
-                  : <Feather name="volume-2" size={13} color={C.primary} />}
-                <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginLeft: 5 }}>Listen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveResult}
-                activeOpacity={0.7}
-                style={[styles.chipBtn, { backgroundColor: C.bgInput, borderColor: C.border }]}
-              >
-                <Feather name="bookmark" size={13} color={C.primary} />
-                <Text variant="caption" color={C.textPrimary} fontWeight="600" style={{ marginLeft: 5 }}>Save</Text>
-              </TouchableOpacity>
+            <Stack horizontal gap={8} flexWrap="wrap">
+              <ActionChip icon={CopyIcon} label="Copy" onPress={handleCopyResult} />
+              <ActionChip icon={SpeakerIcon} label="Listen" loading={ttsLoading} onPress={handleListenResult} />
+              <ActionChip icon={BookmarkIcon} label="Save" onPress={handleSaveResult} />
             </Stack>
-          </Stack>
+          </StyledCard>
         )}
 
         {/* Tips */}
         {!result && !loading && (
-          <Stack gap={8}>
-            <Text variant="label" color={C.textSecondary} fontWeight="700" marginBottom={4}>Tips</Text>
-            {[
-              { icon: 'sun',  tip: 'Good lighting gives better results' },
-              { icon: 'crop', tip: 'Crop tightly around the text' },
-              { icon: 'type', tip: 'Works best with printed text' },
-            ].map((t) => (
-              <Stack key={t.tip} horizontal alignItems="center" gap={10}
-                backgroundColor={C.bgCard} borderRadius={14} padding={12}
-                style={{ borderWidth: 1, borderColor: C.border }}
-              >
-                <Stack
-                  width={30} height={30} borderRadius={15}
-                  alignItems="center" justifyContent="center"
-                  backgroundColor={C.primaryBg}
+          <Stack>
+            <SectionLabel>Tips</SectionLabel>
+            <StyledCard backgroundColor={C.bgCard} borderRadius={16} paddingHorizontal={14}
+              borderWidth={1} borderColor={C.border}
+            >
+              {TIPS.map(({ Icon, tip }, i) => (
+                <Stack key={tip} horizontal alignItems="center" gap={12} paddingVertical={12}
+                  borderTopWidth={i ? 1 : 0} borderTopColor={C.border}
                 >
-                  <Feather name={t.icon as any} size={14} color={C.primary} />
+                  <Stack width={30} height={30} borderRadius={15} alignItems="center" justifyContent="center" backgroundColor={C.primaryBg}>
+                    <Icon size={14} strokeWidth={2} color={C.primary} />
+                  </Stack>
+                  <Text variant="bodySmall" color={C.textSecondary}>{tip}</Text>
                 </Stack>
-                <Text variant="bodySmall" color={C.textSecondary}>{t.tip}</Text>
-              </Stack>
-            ))}
+              ))}
+            </StyledCard>
           </Stack>
         )}
-      </ScrollView>
+      </StyledScrollView>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  viewfinder: {
-    height: 260, borderWidth: 1,
-  },
-  modeBtn: {
-    alignItems: 'center', justifyContent: 'center',
-    borderRadius: 16, paddingVertical: 14, paddingHorizontal: 10,
-    borderWidth: 1,
-  },
-  chipBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 12, borderWidth: 1,
-  },
-})

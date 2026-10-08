@@ -1,94 +1,69 @@
-import React, { useState, useEffect } from 'react'
-import { Platform, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet } from 'react-native'
-import { Feather } from '@expo/vector-icons'
+import React, { useState, useCallback } from 'react'
+import { Platform, ActivityIndicator } from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
 import * as ExpoClipboard from 'expo-clipboard'
-import { StyledPage, Stack, toastService } from 'fluent-styles'
+import {
+  StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, TabBar, type TabItem,
+  toastService, dialogueService,
+} from 'fluent-styles'
 import { Text } from '../../src/components/Text'
-import { useColors, useIsDark } from '../../src/constants'
-import { phrasebookService, Phrase } from '../../src/services/api'
+import { ScreenHeader } from '../../src/components/ScreenHeader'
+import { EmptyState } from '../../src/components/EmptyState'
+import { useColors, useIsDark, getLang } from '../../src/constants'
+import { phrasebookService, type Phrase } from '../../src/services/api'
+import { useTTS } from '../../src/hooks'
+import { BookmarkIcon, SpeakerIcon, CopyIcon, TrashIcon } from '../../src/icons'
 
-const CATEGORY_TABS = [
-  { key: 'all',      label: 'All',     emoji: '⭐' },
-  { key: 'travel',   label: 'Travel',  emoji: '✈️' },
-  { key: 'food',     label: 'Food',    emoji: '🍽️' },
-  { key: 'hotel',    label: 'Hotel',   emoji: '🏨' },
-  { key: 'medical',  label: 'Medical', emoji: '🏥' },
-  { key: 'business', label: 'Business',emoji: '💼' },
-]
+const GENERAL = 'General'
 
-// Group phrases by category for section display
-function groupByCategory(items: Phrase[]): { title: string; data: Phrase[] }[] {
-  const groups: Record<string, Phrase[]> = {}
-  for (const p of items) {
-    const cat = p.category ?? 'General'
-    if (!groups[cat]) groups[cat] = []
-    groups[cat].push(p)
-  }
-  return Object.entries(groups).map(([title, data]) => ({ title: title.toUpperCase(), data }))
-}
+const categoryOf = (p: Phrase) => p.category?.trim() || GENERAL
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-// Section header labels per category
-const SECTION_LABELS: Record<string, string> = {
-  travel:   'AIRPORT & TRANSPORT',
-  food:     'RESTAURANTS & DINING',
-  hotel:    'ACCOMMODATION',
-  medical:  'HEALTH & EMERGENCY',
-  business: 'MEETINGS & WORK',
-  general:  'GENERAL',
-}
-
-function PhraseRow({ phrase, onDelete, onListen, onCopy }: {
+function PhraseCard({ phrase, onDelete, onCopy }: {
   phrase:   Phrase
-  onDelete: (id: string) => void
-  onListen: (text: string, lang: string) => void
+  onDelete: (p: Phrase) => void
   onCopy:   (text: string) => void
 }) {
   const C = useColors()
+  const { speak, loading } = useTTS()
+  const target = getLang(phrase.target_lang)
+
+  const iconBtn = (label: string, onPress: () => void, child: React.ReactNode, disabled = false) => (
+    <StyledPressable
+      width={36} height={36} borderRadius={18} alignItems="center" justifyContent="center"
+      backgroundColor={C.bgInput} onPress={onPress} disabled={disabled}
+      accessibilityRole="button" accessibilityLabel={label}
+    >
+      {child}
+    </StyledPressable>
+  )
 
   return (
-    <Stack
-      backgroundColor={C.bgCard} borderRadius={14} padding={14} marginBottom={10}
-      style={{ borderWidth: 1, borderColor: C.border }}
+    <StyledCard backgroundColor={C.bgCard} borderRadius={14} padding={14} marginBottom={10}
+      borderWidth={1} borderColor={C.border}
     >
-      <Stack horizontal alignItems="flex-start" justifyContent="space-between">
-        <Stack flex={1} marginRight={12}>
-          {/* Source text */}
-          <Text variant="bodySmall" color={C.textSecondary} marginBottom={4}>
-            {phrase.source_text}
-          </Text>
-          {/* Translation */}
-          <Text variant="body" color={C.primary} fontWeight="700" marginBottom={4}>
-            {phrase.translated_text}
-          </Text>
-          {/* Phonetic */}
+      <Stack horizontal alignItems="flex-start" gap={12}>
+        <Stack flex={1} gap={4}>
+          <Text variant="bodySmall" color={C.textSecondary}>{phrase.source_text}</Text>
+          <Text variant="label" color={C.primary}>{phrase.translated_text}</Text>
           {!!phrase.phonetic && (
-            <Text
-              variant="caption"
-              color={C.textMuted}
-              style={{ fontStyle: 'italic' }}
-            >
-              {phrase.phonetic}
-            </Text>
+            <Text variant="caption" color={C.textMuted} style={{ fontStyle: 'italic' }}>{phrase.phonetic}</Text>
           )}
+          <Text variant="caption" color={C.textMuted} style={{ marginTop: 2 }}>
+            {target.flag} {target.label}
+          </Text>
         </Stack>
-
-        {/* Action icons */}
-        <Stack horizontal alignItems="center" gap={12}>
-          <TouchableOpacity
-            onPress={() => onListen(phrase.translated_text, phrase.target_lang)}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 20 }}>🔊</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => onDelete(phrase.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 20 }}>⭐</Text>
-          </TouchableOpacity>
+        <Stack horizontal gap={6}>
+          {iconBtn('Listen', () => speak(phrase.translated_text, phrase.target_lang),
+            loading
+              ? <ActivityIndicator size="small" color={C.primary} />
+              : <SpeakerIcon size={16} strokeWidth={1.9} color={C.primary} />,
+            loading)}
+          {iconBtn('Copy', () => onCopy(phrase.translated_text), <CopyIcon size={15} strokeWidth={1.9} color={C.primary} />)}
+          {iconBtn('Remove from phrasebook', () => onDelete(phrase), <TrashIcon size={15} strokeWidth={1.9} color={C.danger} />)}
         </Stack>
       </Stack>
-    </Stack>
+    </StyledCard>
   )
 }
 
@@ -100,12 +75,7 @@ export default function PhrasebookScreen() {
   const [loading,  setLoading]  = useState(true)
   const [category, setCategory] = useState('all')
 
-  useEffect(() => {
-    loadPhrases()
-  }, [])
-
   const loadPhrases = async () => {
-    setLoading(true)
     try {
       const data = await phrasebookService.list()
       setPhrases(data ?? [])
@@ -116,18 +86,27 @@ export default function PhrasebookScreen() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    setPhrases((prev) => prev.filter((p) => p.id !== id))
+  // Reload on focus — phrases are saved from the other tabs
+  useFocusEffect(useCallback(() => { loadPhrases() }, []))
+
+  const handleDelete = async (phrase: Phrase) => {
+    const ok = await dialogueService.confirm({
+      title: 'Remove phrase?',
+      message: `"${phrase.translated_text}" will be removed from your phrasebook.`,
+      icon: '🔖',
+      confirmLabel: 'Remove',
+      cancelLabel: 'Cancel',
+      destructive: true,
+      theme: isDark ? 'dark' : 'light',
+    })
+    if (!ok) return
+    setPhrases((prev) => prev.filter((p) => p.id !== phrase.id))
     try {
-      await phrasebookService.delete(id)
+      await phrasebookService.delete(phrase.id)
     } catch {
-      // Re-load on error
+      toastService.error('Error', 'Could not remove phrase')
       loadPhrases()
     }
-  }
-
-  const handleListen = (text: string, lang: string) => {
-    // TTS — Sprint 3
   }
 
   const handleCopy = async (text: string) => {
@@ -135,148 +114,79 @@ export default function PhrasebookScreen() {
     toastService.success('Copied', 'Phrase copied to clipboard')
   }
 
-  const filtered = category === 'all'
-    ? phrases
-    : phrases.filter((p) => (p.category ?? '').toLowerCase() === category)
+  // Tabs come from the categories the user's phrases actually use
+  const categories = Array.from(new Set(phrases.map(categoryOf)))
+  const tabs: TabItem<string>[] = [
+    { value: 'all', label: 'All' },
+    ...categories.map((c) => ({ value: c, label: titleCase(c) })),
+  ]
+  const activeCategory = category === 'all' || categories.includes(category) ? category : 'all'
+  const visible = activeCategory === 'all' ? phrases : phrases.filter((p) => categoryOf(p) === activeCategory)
 
-  const grouped = groupByCategory(filtered)
-
-  // Flatten into list with section headers
-  type ListEntry =
-    | { _type: 'header'; title: string }
-    | { _type: 'item';   phrase: Phrase }
-
-  const flat: ListEntry[] = []
-  for (const g of grouped) {
-    const key = g.title.toLowerCase()
-    const sectionLabel = Object.entries(SECTION_LABELS).find(([k]) => g.title.toLowerCase().includes(k))?.[1] ?? g.title
-    flat.push({ _type: 'header', title: sectionLabel })
-    for (const phrase of g.data) flat.push({ _type: 'item', phrase })
-  }
+  const sections = (activeCategory === 'all' ? categories : [activeCategory])
+    .map((c) => ({ title: titleCase(c), data: visible.filter((p) => categoryOf(p) === c) }))
+    .filter((s) => s.data.length > 0)
 
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
-      {/* Header */}
-      <Stack horizontal alignItems="center" justifyContent="space-between"
-        paddingHorizontal={16} paddingTop={8} marginBottom={12}
-      >
-        <Stack horizontal alignItems="center" gap={10}>
-          <Text variant="title" color={C.textPrimary} fontWeight="800">Phrasebook</Text>
-          {phrases.length > 0 && (
-            <Stack
-              backgroundColor={C.primaryBg} borderRadius={10}
-              paddingHorizontal={8} paddingVertical={3}
-              style={{ borderWidth: 1, borderColor: `${C.primary}30` }}
-            >
-              <Text variant="caption" color={C.primary} fontWeight="700">{phrases.length}</Text>
-            </Stack>
-          )}
-        </Stack>
-        <TouchableOpacity activeOpacity={0.7}>
-          <Feather name="search" size={20} color={C.textSecondary} />
-        </TouchableOpacity>
-      </Stack>
+      <ScreenHeader
+        title="Phrasebook"
+        subtitle={phrases.length ? `${phrases.length} saved phrase${phrases.length === 1 ? '' : 's'}` : undefined}
+        variant="large"
+        onBackPress={() => router.push('/(tabs)' as any)}
+      />
 
-      {/* Category tabs */}
-      <Stack horizontal gap={8} paddingHorizontal={16} marginBottom={16} style={{ flexWrap: 'nowrap' }}>
-        <FlatList
-          data={CATEGORY_TABS}
-          keyExtractor={(t) => t.key}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-          renderItem={({ item: tab }) => {
-            const active = category === tab.key
-            return (
-              <TouchableOpacity
-                onPress={() => setCategory(tab.key)}
-                activeOpacity={0.7}
-                style={[
-                  styles.categoryTab,
-                  {
-                    backgroundColor: active ? C.primary : C.bgCard,
-                    borderColor: active ? C.primary : C.border,
-                  },
-                ]}
-              >
-                <Text style={{ fontSize: 14 }}>{tab.emoji}</Text>
-                <Text
-                  variant="caption"
-                  color={active ? '#FFF' : C.textSecondary}
-                  fontWeight="600"
-                  style={{ marginLeft: 5 }}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          }}
-        />
-      </Stack>
-
-      {loading ? (
-        <Stack flex={1} alignItems="center" justifyContent="center">
-          <ActivityIndicator color={C.primary} />
-        </Stack>
-      ) : flat.length === 0 ? (
-        <Stack flex={1} alignItems="center" justifyContent="center" gap={14} paddingHorizontal={32}>
-          <Stack
-            width={64} height={64} borderRadius={32}
-            alignItems="center" justifyContent="center"
-            backgroundColor={C.bgCard}
-            style={{ borderWidth: 1, borderColor: C.border }}
-          >
-            <Text style={{ fontSize: 28 }}>⭐</Text>
-          </Stack>
-          <Text variant="body" color={C.textSecondary} textAlign="center">
-            Save phrases from your translations to build your phrasebook
-          </Text>
-        </Stack>
-      ) : (
-        <FlatList
-          data={flat}
-          keyExtractor={(entry, idx) =>
-            entry._type === 'header'
-              ? `header-${entry.title}-${idx}`
-              : `phrase-${entry.phrase.id}`
-          }
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item: entry }) => {
-            if (entry._type === 'header') {
-              return (
-                <Text
-                  variant="caption"
-                  color={C.textMuted}
-                  fontWeight="700"
-                  style={{ letterSpacing: 0.8, marginTop: 16, marginBottom: 8 }}
-                >
-                  {entry.title}
-                </Text>
-              )
-            }
-            return (
-              <PhraseRow
-                phrase={entry.phrase}
-                onDelete={handleDelete}
-                onListen={handleListen}
-                onCopy={handleCopy}
-              />
-            )
+      {categories.length > 1 && (
+        <TabBar
+          options={tabs}
+          value={activeCategory}
+          onChange={setCategory}
+          indicator="line"
+          showBorder
+          tabAlign="scroll"
+          style={{ marginTop: 12, marginHorizontal: 16 }}
+          colors={{
+            background: C.bgCard,
+            activeText: C.primary,
+            indicator:  C.primary,
+            text:       C.textSecondary,
+            border:     C.border,
           }}
         />
       )}
+
+      <StyledScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {loading && (
+          <Stack alignItems="center" paddingTop={40}>
+            <ActivityIndicator color={C.primary} />
+          </Stack>
+        )}
+
+        {!loading && phrases.length === 0 && (
+          <EmptyState
+            icon={BookmarkIcon}
+            title="No saved phrases yet"
+            subtitle="Tap Save on any translation to keep it here"
+            action={{ label: 'Translate something', onPress: () => router.push('/(tabs)' as any) }}
+          />
+        )}
+
+        {sections.map((section) => (
+          <Stack key={section.title}>
+            {sections.length > 1 && (
+              <Text variant="body" color={C.textMuted} paddingHorizontal={4} style={{ marginTop: 8, marginBottom: 8 }}>
+                {section.title}
+              </Text>
+            )}
+            {section.data.map((p) => (
+              <PhraseCard key={p.id} phrase={p} onDelete={handleDelete} onCopy={handleCopy} />
+            ))}
+          </Stack>
+        ))}
+      </StyledScrollView>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  categoryTab: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1,
-  },
-})

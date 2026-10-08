@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { Platform, ScrollView, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
 import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
+import { ArrowDownIcon, MapPinIcon, MicIcon, BookmarkIcon } from '../src/icons'
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Text as SvgText } from 'react-native-svg'
 import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
@@ -69,7 +69,7 @@ function TextHero() {
           <Stack width={32} height={32} borderRadius={16} alignItems="center" justifyContent="center"
             backgroundColor={fg} style={{ shadowColor: fg, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}
           >
-            <Feather name="arrow-down" size={16} color="#FFF" />
+            <ArrowDownIcon size={16} strokeWidth={2.2} color={C.white} />
           </Stack>
         </Stack>
         {/* Target bubble */}
@@ -85,7 +85,7 @@ function TextHero() {
         borderRadius={20} paddingHorizontal={12} paddingVertical={8}
         style={glass(C.sumColor, C)}
       >
-        <Feather name="map-pin" size={12} color={C.sumColor} />
+        <MapPinIcon size={12} strokeWidth={2.2} color={C.sumColor} />
         <Text variant="caption" color={C.textPrimary} fontWeight="700">Travel</Text>
       </Stack>
     </Stack>
@@ -118,13 +118,13 @@ function VoiceHero() {
         <Svg width={120} height={120} style={{ position: 'absolute' }}>
           <Defs>
             <LinearGradient id="orb" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor="#5EEAD4" />
-              <Stop offset="1" stopColor="#0D9488" />
+              <Stop offset="0" stopColor={C.primaryLight} />
+              <Stop offset="1" stopColor={C.primaryDark} />
             </LinearGradient>
           </Defs>
           <Circle cx={60} cy={60} r={60} fill="url(#orb)" fillOpacity={0.15} />
         </Svg>
-        <Feather name="mic" size={44} color={fg} />
+        <MicIcon size={44} strokeWidth={1.7} color={fg} />
       </Stack>
 
       {/* Transcript chips */}
@@ -165,7 +165,7 @@ function PhraseHero() {
               <Stack width={30} height={30} borderRadius={15} alignItems="center" justifyContent="center"
                 backgroundColor={C.primaryBg}
               >
-                <Feather name="bookmark" size={13} color={fg} />
+                <BookmarkIcon size={13} strokeWidth={2.2} color={fg} />
               </Stack>
             </Stack>
           </Stack>

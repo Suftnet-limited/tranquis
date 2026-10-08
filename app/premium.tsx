@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
-import { Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
-import { router } from 'expo-router'
-import { Feather } from '@expo/vector-icons'
+import { Platform } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
+import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
+import { GradientButton } from '../src/components/AuthUI'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
+import { goBack } from '../src/utils'
+import { XIcon, CheckIcon, SparkleIcon } from '../src/icons'
 
 type Plan = 'yearly' | 'monthly'
 
@@ -37,20 +38,18 @@ export default function PremiumScreen() {
         statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       >
         <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={16}>
-          <Text style={{ fontSize: 56 }}>🌍</Text>
+          <Stack width={84} height={84} borderRadius={42} alignItems="center" justifyContent="center" backgroundColor={C.primaryBg}>
+            <SparkleIcon size={40} strokeWidth={1.8} color={C.primary} />
+          </Stack>
           <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
             You're on Pro!
           </Text>
           <Text variant="body" color={C.textSecondary} textAlign="center">
             Enjoy unlimited translations and all Pro features.
           </Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={[styles.backBtn, { backgroundColor: C.primary }]}
-            activeOpacity={0.8}
-          >
-            <Text variant="body" color="#FFF" fontWeight="700">Go back</Text>
-          </TouchableOpacity>
+          <Stack alignSelf="stretch" marginTop={8}>
+            <GradientButton label="Go back" arrow={false} onPress={() => goBack()} />
+          </Stack>
         </Stack>
       </StyledPage>
     )
@@ -59,37 +58,42 @@ export default function PremiumScreen() {
   return (
     <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
       statusBarStyle="light-content"
-      statusBarBackgroundColor={Platform.OS === 'android' ? '#0A1628' : undefined}
+      statusBarBackgroundColor={Platform.OS === 'android' ? C.navy : undefined}
     >
-      <ScrollView
+      <StyledScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 48 }}
       >
         {/* Hero gradient — dark blue */}
-        <LinearGradient
-          colors={['#0A1628', '#0F2040', '#112236']}
-          style={styles.hero}
-        >
+        <LinearGradient colors={[C.navy, C.navyLight]} style={{ paddingHorizontal: 20, paddingBottom: 24 }}>
           {/* Close */}
-          <StyledPressable onPress={() => router.back()}
-            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+          <StyledPressable onPress={() => goBack()}
+            position="absolute" top={52} right={20} zIndex={10}
+            width={36} height={36} borderRadius={18} alignItems="center" justifyContent="center"
+            backgroundColor="rgba(255,255,255,0.12)"
+            accessibilityRole="button" accessibilityLabel="Close"
           >
-            <Feather name="x" size={20} color="#FFF" />
+            <XIcon size={20} strokeWidth={2.2} color={C.white} />
           </StyledPressable>
 
           {/* Globe emoji hero */}
           <Stack alignItems="center" gap={16} paddingTop={48} paddingBottom={36}>
-            <Text style={{ fontSize: 72 }}>🌍</Text>
+            <Stack width={96} height={96} borderRadius={48} alignItems="center" justifyContent="center"
+              backgroundColor="rgba(255,255,255,0.08)" borderWidth={1} borderColor="rgba(255,255,255,0.14)"
+            >
+              <SparkleIcon size={46} strokeWidth={1.6} color={C.primaryLight} />
+            </Stack>
             <Stack alignItems="center" gap={8}>
               <Text
                 variant="header"
                 fontWeight="800"
                 textAlign="center"
-                style={{ color: '#FFF', fontSize: 26, lineHeight: 34 }}
+                color={C.white}
+                style={{ fontSize: 26, lineHeight: 34 }}
               >
                 Speak every language,{'\n'}anywhere
               </Text>
-              <Text variant="body" textAlign="center" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              <Text variant="body" textAlign="center" color="rgba(255,255,255,0.6)">
                 Unlock the full Tranquis experience
               </Text>
             </Stack>
@@ -101,14 +105,10 @@ export default function PremiumScreen() {
           {/* Plan selector */}
           <Stack gap={12} marginBottom={24}>
             {/* Annual — first, with MOST POPULAR badge */}
-            <TouchableOpacity
-              onPress={() => setPlan('yearly')}
-              activeOpacity={0.85}
-            >
+            <StyledPressable onPress={() => setPlan('yearly')} accessibilityRole="button" accessibilityState={{ selected: plan === 'yearly' }} accessibilityLabel="Pro Annual">
               <Stack
                 borderRadius={18} padding={18}
                 style={[
-                  styles.planCard,
                   {
                     borderColor: plan === 'yearly' ? C.primary : C.border,
                     borderWidth: plan === 'yearly' ? 2 : 1,
@@ -125,7 +125,7 @@ export default function PremiumScreen() {
                         backgroundColor={C.primary} borderRadius={6}
                         paddingHorizontal={8} paddingVertical={3}
                       >
-                        <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>
+                        <Text variant="caption" color={C.white} fontWeight="700" style={{ fontSize: 10, letterSpacing: 0.5 }}>
                           MOST POPULAR
                         </Text>
                       </Stack>
@@ -134,7 +134,7 @@ export default function PremiumScreen() {
                   </Stack>
                   <Stack alignItems="flex-end" gap={2}>
                     <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
-                    <Text variant="caption" color="#22C55E" fontWeight="600">Save 33%</Text>
+                    <Text variant="caption" color={C.live} fontWeight="600">Save 33%</Text>
                   </Stack>
                 </Stack>
                 {/* Radio */}
@@ -145,21 +145,17 @@ export default function PremiumScreen() {
                     backgroundColor={plan === 'yearly' ? C.primary : 'transparent'}
                     style={{ borderWidth: 2, borderColor: plan === 'yearly' ? C.primary : C.border }}
                   >
-                    {plan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                    {plan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor={C.white} />}
                   </Stack>
                 </Stack>
               </Stack>
-            </TouchableOpacity>
+            </StyledPressable>
 
             {/* Monthly */}
-            <TouchableOpacity
-              onPress={() => setPlan('monthly')}
-              activeOpacity={0.85}
-            >
+            <StyledPressable onPress={() => setPlan('monthly')} accessibilityRole="button" accessibilityState={{ selected: plan === 'monthly' }} accessibilityLabel="Pro Monthly">
               <Stack
                 borderRadius={18} padding={18}
                 style={[
-                  styles.planCard,
                   {
                     borderColor: plan === 'monthly' ? C.primary : C.border,
                     borderWidth: plan === 'monthly' ? 2 : 1,
@@ -184,18 +180,17 @@ export default function PremiumScreen() {
                     backgroundColor={plan === 'monthly' ? C.primary : 'transparent'}
                     style={{ borderWidth: 2, borderColor: plan === 'monthly' ? C.primary : C.border }}
                   >
-                    {plan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                    {plan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor={C.white} />}
                   </Stack>
                 </Stack>
               </Stack>
-            </TouchableOpacity>
+            </StyledPressable>
           </Stack>
 
           {/* Feature checklist */}
-          <Stack
+          <StyledCard
             backgroundColor={C.bgCard} borderRadius={18} padding={18} marginBottom={24}
-            gap={14}
-            style={{ borderWidth: 1, borderColor: C.border }}
+            gap={14} borderWidth={1} borderColor={C.border}
           >
             {FEATURES.map((feature) => (
               <Stack key={feature} horizontal alignItems="center" gap={12}>
@@ -204,26 +199,17 @@ export default function PremiumScreen() {
                   alignItems="center" justifyContent="center"
                   backgroundColor={`${C.primary}20`}
                 >
-                  <Feather name="check" size={13} color={C.primary} />
+                  <CheckIcon size={13} strokeWidth={2.6} color={C.primary} />
                 </Stack>
                 <Text variant="bodySmall" color={C.textPrimary} fontWeight="500" style={{ flex: 1 }}>
                   {feature}
                 </Text>
               </Stack>
             ))}
-          </Stack>
+          </StyledCard>
 
           {/* CTA button */}
-          <TouchableOpacity
-            onPress={handlePurchase}
-            disabled={loading}
-            activeOpacity={0.85}
-            style={[styles.ctaBtn, { backgroundColor: C.primary }]}
-          >
-            <Text variant="body" color="#FFF" fontWeight="800">
-              Start Free 7-Day Trial →
-            </Text>
-          </TouchableOpacity>
+          <GradientButton label="Start free 7-day trial" onPress={handlePurchase} loading={loading} />
           <Text
             variant="caption"
             color={C.textMuted}
@@ -235,9 +221,9 @@ export default function PremiumScreen() {
           </Text>
 
           {/* Restore */}
-          <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 8 }}>
+          <StyledPressable onPress={restore} alignSelf="center" marginTop={8} accessibilityRole="button" accessibilityLabel="Restore purchases">
             <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
-          </TouchableOpacity>
+          </StyledPressable>
 
           {/* Legal */}
           <Text
@@ -250,40 +236,8 @@ export default function PremiumScreen() {
             renews unless auto-renew is turned off at least 24 hours before the end of the current period.
           </Text>
         </Stack>
-      </ScrollView>
+      </StyledScrollView>
     </StyledPage>
   )
 }
 
-const styles = StyleSheet.create({
-  hero: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 52, right: 20,
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    zIndex: 10,
-  },
-  planCard: {
-    position: 'relative',
-  },
-  ctaBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: '#14B8A6',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  backBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginTop: 8,
-  },
-})

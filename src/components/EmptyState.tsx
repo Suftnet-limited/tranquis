@@ -1,28 +1,30 @@
 import React from 'react'
 import { Stack, StyledCard, StyledButton } from 'fluent-styles'
-import { Feather } from '@expo/vector-icons'
 import { Text } from './Text'
 import { useColors } from '../constants'
+import type { IconComponent } from '../icons'
 
 interface EmptyStateProps {
-  icon:      keyof typeof Feather.glyphMap
+  icon:      IconComponent
   title:     string
   subtitle?: string
   action?:   { label: string; onPress: () => void }
   style?:    { marginTop?: number }
 }
 
-export function EmptyState({ icon, title, subtitle, action, style }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, subtitle, action, style }: EmptyStateProps) {
   const C = useColors()
   return (
-    <StyledCard backgroundColor={C.bgCard} borderRadius={16} padding={32} marginTop={style?.marginTop ?? 8}>
+    <StyledCard backgroundColor={C.bgCard} borderRadius={16} padding={32} marginTop={style?.marginTop ?? 8}
+      borderWidth={1} borderColor={C.border}
+    >
       <Stack alignItems="center" gap={10}>
         <Stack
           width={76} height={76} borderRadius={23}
           backgroundColor={C.primaryBg} alignItems="center" justifyContent="center"
           marginBottom={4}
         >
-          <Feather name={icon} size={32} color={C.primary} />
+          <Icon size={32} strokeWidth={1.8} color={C.primary} />
         </Stack>
         <Text variant="subtitle" color={C.textPrimary} fontWeight="700" textAlign="center">{title}</Text>
         {subtitle && (

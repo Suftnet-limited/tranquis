@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+.expo-ios-export/
+dist/
+web-build/
+expo-env.d.ts
+
+# Local env — keys stay on this machine
+.env*.local
+.env
+
+# iOS (native project is committed; generated output is not)
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+**/xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Android
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Signing material
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+!debug.keystore
+
+# Misc
+.DS_Store
+*.orig
+*.log
+npm-debug.*
+yarn-error.*

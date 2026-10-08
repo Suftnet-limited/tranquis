@@ -1,0 +1,5 @@
+export const SUPPORT_EMAIL       = 'abel.aghorighor@suftnet.com'
+export const PRIVACY_POLICY_URL  = 'https://suftnetrepo.github.io/tranquis/'
+export const TERMS_URL           = 'https://suftnetrepo.github.io/tranquis/terms.html'
+export const SUPPORT_URL         = 'https://suftnetrepo.github.io/tranquis/support.html'
+export const APP_VERSION         = '1.0.0'

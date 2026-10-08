@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { Tabs } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '../../src/constants'
 import { useAuthStore, usePremiumStore } from '../../src/stores'
 import { identifyUser } from '../../src/services/premiumService'
@@ -10,8 +11,9 @@ const Icon = ({ name, color }: { name: keyof typeof Feather.glyphMap; color: str
 )
 
 export default function TabsLayout() {
-  const C    = useColors()
-  const user = useAuthStore((s) => s.user)
+  const C      = useColors()
+  const insets = useSafeAreaInsets()
+  const user   = useAuthStore((s) => s.user)
 
   // Tie RevenueCat to the Tranquis account
   useEffect(() => {
@@ -31,8 +33,8 @@ export default function TabsLayout() {
           backgroundColor: C.bgCard,
           borderTopColor:  C.border,
           borderTopWidth:  0.1,
-          height:          60,
-          paddingBottom:   8,
+          height:          60 + insets.bottom,
+          paddingBottom:   insets.bottom + 4,
           paddingTop:      6,
         },
         tabBarLabelStyle: {

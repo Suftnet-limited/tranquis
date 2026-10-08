@@ -20,7 +20,7 @@ function LangPairRow() {
   const target = getLang(targetLang)
 
   const openPicker = (side: 'source' | 'target') => {
-    router.push({ pathname: '/lang-picker/index', params: { side } } as any)
+    router.push({ pathname: '/lang-picker', params: { side } } as any)
   }
 
   return (

@@ -179,7 +179,7 @@ export default function ProfileScreen() {
               <StyledPressable
                 key={m} flex={1}
                 backgroundColor={selected ? C.navy : C.bgCard}
-                borderWidth={1} borderColor={selected ? C.navy : C.border}
+                borderWidth={selected ? 2 : 1} borderColor={selected ? C.primary : C.border}
                 borderRadius={12} paddingVertical={14}
                 alignItems="center" gap={6}
                 onPress={() => setMode(m)}

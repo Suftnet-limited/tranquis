@@ -47,25 +47,26 @@ export default function LangPickerScreen() {
 
       {/* Search */}
       <StyledCard
-        flexDirection="row" alignItems="center" gap={10}
         marginHorizontal={16} marginTop={12} marginBottom={8}
         backgroundColor={C.bgCard} borderRadius={14} paddingHorizontal={14} paddingVertical={10}
         borderWidth={1} borderColor={C.border}
       >
-        <SearchIcon size={18} strokeWidth={2} color={C.textMuted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search languages…"
-          placeholderTextColor={C.textMuted}
-          autoFocus
-          style={{ flex: 1, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, color: C.textPrimary }}
-        />
-        {!!query && (
-          <StyledPressable onPress={() => setQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
-            <XCircleIcon size={16} strokeWidth={2} color={C.textMuted} />
-          </StyledPressable>
-        )}
+        <Stack horizontal alignItems="center" gap={10}>
+          <SearchIcon size={18} strokeWidth={2} color={C.textMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search languages…"
+            placeholderTextColor={C.textMuted}
+            autoFocus
+            style={{ flex: 1, fontFamily: 'PlusJakartaSans_400Regular', fontSize: 15, color: C.textPrimary }}
+          />
+          {!!query && (
+            <StyledPressable onPress={() => setQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
+              <XCircleIcon size={16} strokeWidth={2} color={C.textMuted} />
+            </StyledPressable>
+          )}
+        </Stack>
       </StyledCard>
 
       <FlatList
@@ -81,21 +82,22 @@ export default function LangPickerScreen() {
               accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={item.label}
             >
               <StyledCard
-                flexDirection="row" alignItems="center" gap={14}
                 paddingVertical={13} paddingHorizontal={16} marginBottom={6} borderRadius={14}
                 backgroundColor={selected ? C.primaryBg : C.bgCard}
                 borderWidth={1} borderColor={selected ? C.primary : C.border}
               >
-                <Text style={{ fontSize: 26 }}>{item.flag}</Text>
-                <Stack flex={1}>
-                  <Text variant="label" color={C.textPrimary} fontWeight={selected ? '700' : '500'}>{item.label}</Text>
-                  <Text variant="caption" color={C.textMuted} style={{ marginTop: 1 }}>{item.code.toUpperCase()}</Text>
-                </Stack>
-                {selected && (
-                  <Stack width={24} height={24} borderRadius={12} alignItems="center" justifyContent="center" backgroundColor={C.primary}>
-                    <CheckIcon size={14} strokeWidth={2.6} color={C.white} />
+                <Stack horizontal alignItems="center" gap={14}>
+                  <Text style={{ fontSize: 26 }}>{item.flag}</Text>
+                  <Stack flex={1}>
+                    <Text variant="label" color={C.textPrimary} fontWeight={selected ? '700' : '500'}>{item.label}</Text>
+                    <Text variant="caption" color={C.textMuted} style={{ marginTop: 1 }}>{item.code.toUpperCase()}</Text>
                   </Stack>
-                )}
+                  {selected && (
+                    <Stack width={24} height={24} borderRadius={12} alignItems="center" justifyContent="center" backgroundColor={C.primary}>
+                      <CheckIcon size={14} strokeWidth={2.6} color={C.white} />
+                    </Stack>
+                  )}
+                </Stack>
               </StyledCard>
             </StyledPressable>
           )

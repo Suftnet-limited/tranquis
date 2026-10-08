@@ -35,13 +35,14 @@ function LangButton({ code, onPress }: { code: string; onPress: () => void }) {
   return (
     <StyledPressable flex={1} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Change language, ${lang.label}`}>
       <StyledCard
-        flexDirection="row" alignItems="center" gap={8}
         backgroundColor={C.bgCard} borderRadius={14} paddingHorizontal={12} paddingVertical={11}
         borderWidth={1} borderColor={C.border}
       >
-        <Text style={{ fontSize: 20 }}>{lang.flag}</Text>
-        <Text variant="label" color={C.textPrimary} numberOfLines={1} style={{ flex: 1 }}>{lang.label}</Text>
-        <ChevronDownIcon size={14} strokeWidth={2} color={C.textMuted} />
+        <Stack horizontal alignItems="center" gap={8}>
+          <Text style={{ fontSize: 20 }}>{lang.flag}</Text>
+          <Text variant="label" color={C.textPrimary} numberOfLines={1} style={{ flex: 1 }}>{lang.label}</Text>
+          <ChevronDownIcon size={14} strokeWidth={2} color={C.textMuted} />
+        </Stack>
       </StyledCard>
     </StyledPressable>
   )
@@ -249,13 +250,14 @@ export default function TranslateScreen() {
                   accessibilityRole="button" accessibilityLabel={`Translate: ${phrase}`}
                 >
                   <StyledCard
-                    flexDirection="row" alignItems="center" gap={12}
                     backgroundColor={C.bgCard} borderRadius={14} padding={14}
                     borderWidth={1} borderColor={C.border}
                   >
-                    <Text style={{ fontSize: 20 }}>{emoji}</Text>
-                    <Text variant="body" color={C.textPrimary} style={{ flex: 1 }}>{phrase}</Text>
-                    <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />
+                    <Stack horizontal alignItems="center" gap={12}>
+                      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                      <Text variant="body" color={C.textPrimary} style={{ flex: 1 }}>{phrase}</Text>
+                      <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />
+                    </Stack>
                   </StyledCard>
                 </StyledPressable>
               ))}

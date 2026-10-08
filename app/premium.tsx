@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Platform } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { GradientButton } from '../src/components/AuthUI'
@@ -56,19 +55,24 @@ export default function PremiumScreen() {
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage flex={1} backgroundColor={C.navy} showStatusBar
       statusBarStyle="light-content"
       statusBarBackgroundColor={Platform.OS === 'android' ? C.navy : undefined}
     >
       <StyledScrollView
         showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: C.bg }}
         contentContainerStyle={{ paddingBottom: 48 }}
       >
-        {/* Hero gradient — dark blue */}
-        <LinearGradient colors={[C.navy, C.navyLight]} style={{ paddingHorizontal: 20, paddingBottom: 24 }}>
+        {/* Hero — a fixed dark surface with a soft glow, as on NailBid's hero cards */}
+        <Stack paddingHorizontal={20} paddingBottom={24} overflow="hidden" backgroundColor={C.navy}>
+          <Stack
+            position="absolute" top={-110} right={-90} width={260} height={260} borderRadius={999}
+            backgroundColor={`${C.primary}1F`} pointerEvents="none"
+          />
           {/* Close */}
           <StyledPressable onPress={() => goBack()}
-            position="absolute" top={52} right={20} zIndex={10}
+            position="absolute" top={16} right={20} zIndex={10}
             width={36} height={36} borderRadius={18} alignItems="center" justifyContent="center"
             backgroundColor="rgba(255,255,255,0.12)"
             accessibilityRole="button" accessibilityLabel="Close"
@@ -77,7 +81,7 @@ export default function PremiumScreen() {
           </StyledPressable>
 
           {/* Globe emoji hero */}
-          <Stack alignItems="center" gap={16} paddingTop={48} paddingBottom={36}>
+          <Stack alignItems="center" gap={16} paddingTop={40} paddingBottom={28}>
             <Stack width={96} height={96} borderRadius={48} alignItems="center" justifyContent="center"
               backgroundColor="rgba(255,255,255,0.08)" borderWidth={1} borderColor="rgba(255,255,255,0.14)"
             >
@@ -98,7 +102,7 @@ export default function PremiumScreen() {
               </Text>
             </Stack>
           </Stack>
-        </LinearGradient>
+        </Stack>
 
         <Stack paddingHorizontal={20} paddingTop={24} gap={0}>
 
@@ -116,7 +120,7 @@ export default function PremiumScreen() {
                   },
                 ]}
               >
-                <Stack horizontal alignItems="center" justifyContent="space-between">
+                <Stack horizontal alignItems="center" justifyContent="space-between" paddingRight={34}>
                   <Stack gap={3}>
                     <Stack horizontal alignItems="center" gap={10}>
                       <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
@@ -163,7 +167,7 @@ export default function PremiumScreen() {
                   },
                 ]}
               >
-                <Stack horizontal alignItems="center" justifyContent="space-between">
+                <Stack horizontal alignItems="center" justifyContent="space-between" paddingRight={34}>
                   <Stack gap={3}>
                     <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
                     <Text variant="caption" color={C.textMuted}>Billed monthly</Text>

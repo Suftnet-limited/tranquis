@@ -152,7 +152,7 @@ export default function CameraScreen() {
               ))}
               <Stack alignItems="center" gap={14}>
                 <Stack width={72} height={72} borderRadius={36} alignItems="center" justifyContent="center"
-                  backgroundColor={C.primaryBg}
+                  backgroundColor={`${C.primary}26`} borderWidth={1} borderColor={`${C.primary}55`}
                 >
                   <CameraIcon size={30} strokeWidth={1.8} color={C.primary} />
                 </Stack>

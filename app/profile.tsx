@@ -1,7 +1,6 @@
-import React, { useCallback, useState } from 'react'
+import React from 'react'
 import { Platform } from 'react-native'
-import { router, useFocusEffect } from 'expo-router'
-import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
+import { router } from 'expo-router'
 import {
   StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable,
   toastService, dialogueService,
@@ -10,7 +9,7 @@ import { Text } from '../src/components/Text'
 import { useColors, useIsDark, type ThemeMode, type ThemeColors } from '../src/constants'
 import { useAuthStore, useThemeStore } from '../src/stores'
 import { usePremium } from '../src/hooks'
-import { authService, translateService, phrasebookService } from '../src/services/api'
+import { authService } from '../src/services/api'
 import { goBack } from '../src/utils'
 import {
   MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon, SparkleIcon,
@@ -68,15 +67,6 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   )
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
-  const C = useColors()
-  return (
-    <Stack flex={1} alignItems="center" gap={2}>
-      <Text color={C.white} fontWeight="800" style={{ fontSize: 20 }}>{value}</Text>
-      <Text variant="caption" color="rgba(255,255,255,0.6)">{label}</Text>
-    </Stack>
-  )
-}
 
 export default function ProfileScreen() {
   const C      = useColors()
@@ -85,28 +75,8 @@ export default function ProfileScreen() {
   const { user, logout } = useAuthStore()
   const { mode, setMode } = useThemeStore()
   const { isPremium } = usePremium()
-  const [stats, setStats] = useState<{ translations: number; phrases: number; languages: number } | null>(null)
 
-  const name = user?.full_name?.trim() || 'Your account'
-  const initial = (user?.full_name?.trim().charAt(0) || 'T').toUpperCase()
   const theme = isDark ? 'dark' : 'light'
-
-  // Real numbers from the account, refreshed each time the screen opens
-  useFocusEffect(useCallback(() => {
-    let cancelled = false
-    Promise.all([
-      translateService.history({ limit: 1 }).catch(() => null),
-      phrasebookService.list().catch(() => null),
-    ]).then(([history, phrases]) => {
-      if (cancelled) return
-      setStats({
-        translations: history?.total ?? 0,
-        phrases:      phrases?.length ?? 0,
-        languages:    new Set((phrases ?? []).map((p) => p.target_lang)).size,
-      })
-    })
-    return () => { cancelled = true }
-  }, []))
 
   const handleLogout = async () => {
     const ok = await dialogueService.confirm({
@@ -170,47 +140,6 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingTop: 18, paddingBottom: 40 }}
       >
-        {/* Hero */}
-        <Stack backgroundColor={C.navy} borderRadius={24} padding={20} marginBottom={16} overflow="hidden"
-          style={{ shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}
-        >
-          <Stack position="absolute" top={-90} right={-70} width={220} height={220} borderRadius={110}
-            backgroundColor={`${C.primary}22`} pointerEvents="none" />
-          <Stack horizontal alignItems="center" gap={14}>
-            <Stack width={60} height={60} alignItems="center" justifyContent="center">
-              <Svg width={60} height={60} style={{ position: 'absolute' }}>
-                <Defs>
-                  <LinearGradient id="avatarRing" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0" stopColor={C.primary} />
-                    <Stop offset="1" stopColor={C.sumColor} />
-                  </LinearGradient>
-                </Defs>
-                <Circle cx={30} cy={30} r={30} fill="url(#avatarRing)" />
-              </Svg>
-              <Text color={C.white} fontWeight="800" style={{ fontSize: 24 }}>{initial}</Text>
-            </Stack>
-            <Stack flex={1} gap={2}>
-              <Text variant="subtitle" color={C.white} fontWeight="800" numberOfLines={1}>{name}</Text>
-              <Text variant="caption" color="rgba(255,255,255,0.6)" numberOfLines={1}>{user?.email ?? ''}</Text>
-              <Stack alignSelf="flex-start" horizontal alignItems="center" gap={4} marginTop={6}
-                backgroundColor={isPremium ? C.primary : 'rgba(255,255,255,0.12)'} borderRadius={8}
-                paddingHorizontal={8} paddingVertical={3}
-              >
-                {isPremium && <SparkleIcon size={11} strokeWidth={2.2} color={C.white} />}
-                <Text variant="caption" color={C.white} fontWeight="700">{isPremium ? 'Pro' : 'Free plan'}</Text>
-              </Stack>
-            </Stack>
-          </Stack>
-
-          <Stack horizontal marginTop={18} paddingTop={16} borderTopWidth={1} borderTopColor="rgba(255,255,255,0.1)">
-            <Stat value={stats ? String(stats.translations) : '–'} label="Translations" />
-            <Stack width={1} backgroundColor="rgba(255,255,255,0.1)" />
-            <Stat value={stats ? String(stats.phrases) : '–'} label="Saved phrases" />
-            <Stack width={1} backgroundColor="rgba(255,255,255,0.1)" />
-            <Stat value={stats ? String(stats.languages) : '–'} label="Languages" />
-          </Stack>
-        </Stack>
-
         {/* Pro */}
         <StyledPressable onPress={() => router.push('/premium' as any)} accessibilityRole="button" accessibilityLabel="Tranquis Pro"
           marginBottom={24}

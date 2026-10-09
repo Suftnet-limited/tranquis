@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons'
 import * as ExpoClipboard from 'expo-clipboard'
 import { StyledPage, Stack } from 'fluent-styles'
 import { Text } from '../../src/components/Text'
-import { useColors, useIsDark, TONES, getLang } from '../../src/constants'
+import { useColors, useIsDark, getLang } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { useTranslate } from '../../src/hooks'
 
@@ -56,52 +56,13 @@ function LangPairRow() {
   )
 }
 
-// ─── Tone Selector ─────────────────────────────────────────────────────────────
-function ToneRow() {
-  const C    = useColors()
-  const { tone, setTone } = useTranslatorStore()
-
-  return (
-    <Stack horizontal gap={8} marginBottom={14}>
-      {TONES.map((t) => {
-        const active = tone === t.key
-        return (
-          <TouchableOpacity
-            key={t.key}
-            onPress={() => setTone(t.key)}
-            activeOpacity={0.7}
-            style={[
-              styles.toneChip,
-              {
-                backgroundColor: active ? 'transparent' : C.bgCard,
-                borderColor:     active ? '#7C3AED' : C.border,
-                borderWidth:     active ? 2 : 1,
-              },
-            ]}
-          >
-            <Feather name={t.icon as any} size={12} color={active ? '#7C3AED' : C.textSecondary} />
-            <Text
-              variant="caption"
-              color={active ? '#7C3AED' : C.textSecondary}
-              fontWeight={active ? '700' : '600'}
-              style={{ marginLeft: 5 }}
-            >
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        )
-      })}
-    </Stack>
-  )
-}
 
 // ─── Translation Result Card ───────────────────────────────────────────────────
-function ResultCard({ result, onSave, onCopy, onListen, onExplain }: {
+function ResultCard({ result, onSave, onCopy, onListen }: {
   result: { id: string; translated_text: string; explanation?: string }
-  onSave:    () => void
-  onCopy:    () => void
-  onListen:  () => void
-  onExplain: () => void
+  onSave:   () => void
+  onCopy:   () => void
+  onListen: () => void
 }) {
   const C = useColors()
   return (
@@ -136,10 +97,9 @@ function ResultCard({ result, onSave, onCopy, onListen, onExplain }: {
 
       <Stack horizontal gap={8} flexWrap="wrap">
         {[
-          { icon: 'volume-2', label: 'Listen',  onPress: onListen  },
-          { icon: 'copy',     label: 'Copy',    onPress: onCopy    },
-          { icon: 'bookmark', label: 'Save',    onPress: onSave    },
-          { icon: 'info',     label: 'Explain', onPress: onExplain },
+          { icon: 'volume-2', label: 'Listen', onPress: onListen },
+          { icon: 'copy',     label: 'Copy',   onPress: onCopy   },
+          { icon: 'bookmark', label: 'Save',   onPress: onSave   },
         ].map((a) => (
           <TouchableOpacity
             key={a.label}
@@ -167,20 +127,37 @@ const QUICK_PHRASES = [
   { emoji: '🙏', text: 'Thank you very much.' },
 ]
 
+// ─── Quota pill shown in header ────────────────────────────────────────────────
+function QuotaPill({ used, limit }: { used: number; limit: number }) {
+  const C = useColors()
+  const remaining = Math.max(0, limit - used)
+  const pct = used / limit
+  const color = pct >= 1 ? '#EF4444' : pct >= 0.8 ? '#F59E0B' : '#22C55E'
+  return (
+    <Stack horizontal alignItems="center" gap={5}
+      style={{ backgroundColor: C.bgCard, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: C.border }}
+    >
+      <Stack width={6} height={6} borderRadius={3} backgroundColor={color} />
+      <Text variant="caption" color={C.textSecondary} fontWeight="600">
+        {remaining}/{limit} left
+      </Text>
+    </Stack>
+  )
+}
+
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function TranslateScreen() {
   const C      = useColors()
   const isDark = useIsDark()
 
-  const [text, setText]               = useState('')
-  const [explainNext, setExplainNext] = useState(false)
+  const [text, setText] = useState('')
   const inputRef = useRef<TextInput>(null)
 
-  const { translate, saveToPhrasebook, loading, result, clear } = useTranslate()
+  const { translate, saveToPhrasebook, loading, result, clear, quota, quotaExceeded } = useTranslate()
 
   const handleTranslate = () => {
     if (!text.trim()) return
-    translate(text, explainNext)
+    translate(text)
   }
 
   const handlePaste = async () => {
@@ -201,15 +178,7 @@ export default function TranslateScreen() {
   }
 
   const handleListen = () => {
-    // TTS — Sprint 3
-  }
-
-  const handleExplain = () => {
-    if (!result) {
-      setExplainNext(true)
-      return
-    }
-    translate(text, true)
+    // TTS — wired in voice tab
   }
 
   const handleClear = () => {
@@ -232,16 +201,9 @@ export default function TranslateScreen() {
         <Stack horizontal alignItems="center" justifyContent="space-between" marginBottom={20} marginTop={8}>
           <Stack horizontal alignItems="center" gap={8}>
             <Text variant="title" color={C.textPrimary} fontWeight="800">Tranquis</Text>
-            <Text variant="bodySmall" color={C.textMuted} fontWeight="500">•</Text>
-            {/* Green online dot */}
-            <Stack horizontal alignItems="center" gap={5}>
-              <Stack
-                width={8} height={8} borderRadius={4}
-                backgroundColor="#22C55E"
-                style={{ shadowColor: '#22C55E', shadowOpacity: 0.6, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 3 }}
-              />
-              <Text variant="caption" color="#22C55E" fontWeight="600">Online</Text>
-            </Stack>
+            {quota && !quota.unlimited && (
+              <QuotaPill used={quota.used} limit={quota.limit} />
+            )}
           </Stack>
           <TouchableOpacity
             onPress={() => router.push('/profile' as any)}
@@ -252,11 +214,26 @@ export default function TranslateScreen() {
           </TouchableOpacity>
         </Stack>
 
+        {/* Quota exceeded banner */}
+        {quotaExceeded && (
+          <TouchableOpacity onPress={() => router.push('/premium' as any)} activeOpacity={0.85}>
+            <Stack
+              horizontal alignItems="center" gap={10}
+              backgroundColor="#FEF3C7"
+              borderRadius={16} padding={14} marginBottom={14}
+              style={{ borderWidth: 1, borderColor: '#FDE68A' }}
+            >
+              <Feather name="zap" size={18} color="#D97706" />
+              <Stack flex={1}>
+                <Text variant="label" color="#92400E" fontWeight="700">Daily limit reached</Text>
+                <Text variant="caption" color="#92400E">Upgrade to Pro for unlimited translations →</Text>
+              </Stack>
+            </Stack>
+          </TouchableOpacity>
+        )}
+
         {/* Lang pair */}
         <LangPairRow />
-
-        {/* Tone chips */}
-        <ToneRow />
 
         {/* Input card */}
         <Stack
@@ -327,7 +304,6 @@ export default function TranslateScreen() {
             onSave={handleSave}
             onCopy={handleCopyResult}
             onListen={handleListen}
-            onExplain={handleExplain}
           />
         )}
 

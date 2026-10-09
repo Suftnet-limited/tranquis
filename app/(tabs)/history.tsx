@@ -137,7 +137,7 @@ export default function HistoryScreen() {
     setLoading(true)
     try {
       const data = await translateService.history({ limit: 50 })
-      setItems((data.items ?? []).map((i: any) => ({ ...i, saved: false, type: i.type ?? 'text' })))
+      setItems((Array.isArray(data) ? data : []).map((i: any) => ({ ...i, saved: i.saved ?? false, type: i.mode ?? 'text' })))
     } catch {
       // Fallback to empty
       setItems([])
@@ -149,7 +149,7 @@ export default function HistoryScreen() {
   const handleDelete = async (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id))
     try {
-      await translateService.deleteHistory(id)
+      // Individual deletion not yet exposed — optimistic UI only
     } catch {
       toastService.error('Error', 'Could not delete item')
     }

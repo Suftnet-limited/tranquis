@@ -80,6 +80,7 @@ export const ArrowDownIcon  = make(({ color, strokeWidth }) => <Path d="M12 5v14
 export const ChevronDownIcon  = make(({ color, strokeWidth }) => <Path d="M6 9l6 6 6-6" {...line(color, strokeWidth)} />)
 export const ChevronUpIcon    = make(({ color, strokeWidth }) => <Path d="M18 15l-6-6-6 6" {...line(color, strokeWidth)} />)
 export const ChevronRightIcon = make(({ color, strokeWidth }) => <Path d="M9 18l6-6-6-6" {...line(color, strokeWidth)} />)
+export const ChevronLeftIcon  = make(({ color, strokeWidth }) => <Path d="M15 18l-6-6 6-6" {...line(color, strokeWidth)} />)
 export const SwapIcon = make(({ color, strokeWidth }) => (
   <Path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" {...line(color, strokeWidth)} />
 ))
@@ -260,7 +261,7 @@ export const MoonIcon = make(({ color, strokeWidth }) => (
 export const ICONS = {
   translate: TranslateIcon, mic: MicIcon, camera: CameraIcon, book: BookIcon, clock: ClockIcon,
   gear: GearIcon, 'arrow-right': ArrowRightIcon, 'arrow-left': ArrowLeftIcon, 'arrow-down': ArrowDownIcon,
-  'chevron-down': ChevronDownIcon, 'chevron-up': ChevronUpIcon, 'chevron-right': ChevronRightIcon,
+  'chevron-down': ChevronDownIcon, 'chevron-up': ChevronUpIcon, 'chevron-right': ChevronRightIcon, 'chevron-left': ChevronLeftIcon,
   swap: SwapIcon, x: XIcon, check: CheckIcon, plus: PlusIcon, 'x-circle': XCircleIcon, copy: CopyIcon,
   clipboard: ClipboardIcon, bookmark: BookmarkIcon, star: StarIcon, speaker: SpeakerIcon, trash: TrashIcon,
   search: SearchIcon, stop: StopIcon, image: ImageIcon, crop: CropIcon, zap: ZapIcon, sparkle: SparkleIcon,

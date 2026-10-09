@@ -1,18 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Platform, StyleSheet, Animated, ActivityIndicator } from 'react-native'
-import { router } from 'expo-router'
+import { Platform, Animated, ActivityIndicator } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
 import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toastService } from 'fluent-styles'
 import * as FileSystem from 'expo-file-system'
 import { Audio } from 'expo-av'
 import { Text } from '../../src/components/Text'
-import { ScreenHeader } from '../../src/components/ScreenHeader'
-import { IconButton } from '../../src/components/IconButton'
-import { useColors, useIsDark } from '../../src/constants'
+import { useColors, useIsDark, getLang } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { translateService, type TranslationResult } from '../../src/services/api'
 import { useTTS } from '../../src/hooks'
-import { MicIcon, StopIcon, BookmarkIcon, SpeakerIcon, TrashIcon } from '../../src/icons'
+import { MicIcon, StopIcon, StarIcon, SpeakerIcon, ChevronLeftIcon } from '../../src/icons'
+import { goBack } from '../../src/utils'
 
 type TranscriptLine = {
   id:          string
@@ -22,8 +20,9 @@ type TranscriptLine = {
   translation?: TranslationResult
 }
 
-const BAR_COUNT  = 20
-const BAR_REST   = 6
+// Waveform: resting heights give the idle bars the mock's uneven shape
+const BAR_REST = [10, 18, 13, 28, 20, 25, 12, 22, 15, 10, 17]
+const ORB = 140
 
 export default function VoiceScreen() {
   const C      = useColors()
@@ -34,36 +33,23 @@ export default function VoiceScreen() {
   const [transcript, setTranscript] = useState<TranscriptLine[]>([])
   const [processing, setProcessing] = useState(false)
   const recordingRef = useRef<Audio.Recording | null>(null)
+  const scrollRef    = useRef<any>(null)
   const { speak, loading: ttsLoading } = useTTS()
 
   // Waveform bars jump to new heights every 300ms while listening
-  const barHeights = useRef(Array.from({ length: BAR_COUNT }, () => new Animated.Value(BAR_REST))).current
-  // "Listening…" dot blinks; the interim bubble's dots cycle
-  const dotOpacity = useRef(new Animated.Value(1)).current
-  const [dots, setDots] = useState(1)
+  const barHeights = useRef(BAR_REST.map((h) => new Animated.Value(h))).current
 
   useEffect(() => {
     if (!listening) {
-      barHeights.forEach((b) => Animated.timing(b, { toValue: BAR_REST, duration: 200, useNativeDriver: false }).start())
+      barHeights.forEach((b, i) => Animated.timing(b, { toValue: BAR_REST[i], duration: 200, useNativeDriver: false }).start())
       return
     }
     const interval = setInterval(() => {
       barHeights.forEach((b) => {
-        Animated.timing(b, { toValue: Math.random() * 36 + 8, duration: 150, useNativeDriver: false }).start()
+        Animated.timing(b, { toValue: Math.random() * 32 + 8, duration: 150, useNativeDriver: false }).start()
       })
     }, 300)
     return () => clearInterval(interval)
-  }, [listening])
-
-  useEffect(() => {
-    if (!listening) { dotOpacity.setValue(1); setDots(1); return }
-    const blink = Animated.loop(Animated.sequence([
-      Animated.timing(dotOpacity, { toValue: 0.15, duration: 300, useNativeDriver: true }),
-      Animated.timing(dotOpacity, { toValue: 1,    duration: 300, useNativeDriver: true }),
-    ]))
-    blink.start()
-    const interval = setInterval(() => setDots((d) => (d % 3) + 1), 400)
-    return () => { blink.stop(); clearInterval(interval) }
   }, [listening])
 
   // Pulsing animation
@@ -75,11 +61,11 @@ export default function VoiceScreen() {
       Animated.loop(
         Animated.sequence([
           Animated.parallel([
-            Animated.timing(pulse, { toValue: 1.12, duration: 700, useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 1.06, duration: 700, useNativeDriver: true }),
             Animated.timing(glow,  { toValue: 1,    duration: 700, useNativeDriver: true }),
           ]),
           Animated.parallel([
-            Animated.timing(pulse, { toValue: 0.96, duration: 700, useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 0.98, duration: 700, useNativeDriver: true }),
             Animated.timing(glow,  { toValue: 0.3,  duration: 700, useNativeDriver: true }),
           ]),
         ])
@@ -93,6 +79,11 @@ export default function VoiceScreen() {
       ]).start()
     }
   }, [listening])
+
+  // Bring a new translation into view — it lands below the orb
+  useEffect(() => {
+    if (transcript.length) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)
+  }, [transcript.length])
 
   // Release the mic if the screen unmounts mid-recording
   useEffect(() => () => { recordingRef.current?.stopAndUnloadAsync().catch(() => {}) }, [])
@@ -166,189 +157,185 @@ export default function VoiceScreen() {
     }
   }
 
-  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] })
-  const glowScale   = glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.3] })
+  const ringOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] })
+  const ringScale   = glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] })
 
-  const lastLine = transcript[transcript.length - 1]
+  const lastLine  = transcript[transcript.length - 1]
   const hasResult = !!lastLine?.translated && !listening && !processing
+  const source    = getLang(sourceLang)
+  const showCard  = listening || processing || !!lastLine
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
+      statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
     >
-      <ScreenHeader
-        title="Live Voice"
-        variant="large"
-        onBackPress={() => router.push('/(tabs)' as any)}
-        rightIcon={transcript.length > 0
-          ? <IconButton icon={TrashIcon} label="Clear conversation" onPress={() => setTranscript([])} />
-          : undefined}
-      />
+      {/* Header */}
+      <StyledPage.Header.Full>
+        <Stack horizontal alignItems="center" gap={14} marginHorizontal={16} paddingBottom={14}>
+          <StyledPressable
+            width={44} height={44} borderRadius={12} alignItems="center" justifyContent="center"
+            backgroundColor={C.bgInput} onPress={() => goBack()}
+            accessibilityRole="button" accessibilityLabel="Go back"
+          >
+            <ChevronLeftIcon size={20} strokeWidth={2.4} color={C.textPrimary} />
+          </StyledPressable>
+          <Stack flex={1}>
+            <Text variant="title" color={C.textPrimary} fontWeight="800">Voice Translation</Text>
+            <Text variant="bodySmall" color={C.textMuted}>Tap mic and speak naturally</Text>
+          </Stack>
+          <Stack backgroundColor={C.primaryBg} borderRadius={16} paddingHorizontal={12} paddingVertical={6}>
+            <Text variant="label" color={C.primaryDark} fontWeight="700">
+              {sourceLang.toUpperCase()} → {targetLang.toUpperCase()}
+            </Text>
+          </Stack>
+        </Stack>
+      </StyledPage.Header.Full>
 
       <StyledScrollView
+        ref={scrollRef}
+        style={{ backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 }}
       >
-        {/* Waveform bars */}
-        <Stack horizontal gap={3} alignItems="flex-end" justifyContent="center" height={48} marginBottom={24}>
-          {barHeights.map((height, i) => {
-            const active = listening && i % 3 !== 1
-            return (
-              <Animated.View
-                key={i}
-                style={{
-                  width: 4, height, borderRadius: 3,
-                  backgroundColor: active ? C.primary : C.bgMuted,
-                  opacity: active ? 1 : 0.45,
-                }}
-              />
-            )
-          })}
-        </Stack>
-
-        {/* Orb */}
-        <Stack alignItems="center" justifyContent="center" marginBottom={24}>
-          <Animated.View style={[
-            styles.glowRing,
-            { borderColor: C.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] },
-          ]} />
+        {/* Orb with two soft rings */}
+        <Stack alignItems="center" justifyContent="center" height={ORB + 60}>
+          <Animated.View style={{
+            position: 'absolute', width: ORB + 60, height: ORB + 60, borderRadius: (ORB + 60) / 2,
+            borderWidth: 1.5, borderColor: `${C.primary}33`,
+            opacity: ringOpacity, transform: [{ scale: ringScale }],
+          }} />
+          <Animated.View style={{
+            position: 'absolute', width: ORB + 26, height: ORB + 26, borderRadius: (ORB + 26) / 2,
+            borderWidth: 2.5, borderColor: `${C.primary}55`,
+            opacity: ringOpacity,
+          }} />
           <Animated.View style={{ transform: [{ scale: pulse }] }}>
             <StyledPressable
+              width={ORB} height={ORB} borderRadius={ORB / 2} alignItems="center" justifyContent="center"
               onPress={listening ? handleStop : handleStart}
               disabled={processing}
               accessibilityRole="button"
               accessibilityLabel={listening ? 'Stop recording' : 'Start recording'}
-              style={[styles.orb, { borderColor: listening ? C.primary : C.border, shadowColor: C.accent }]}
+              style={{ overflow: 'hidden', shadowColor: C.sumColor, shadowOpacity: 0.35, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 10 }}
             >
-              <Svg width={140} height={140} style={StyleSheet.absoluteFill}>
+              <Svg width={ORB} height={ORB} style={{ position: 'absolute' }}>
                 <Defs>
-                  <LinearGradient id="orbGrad" x1="0" y1="0" x2="1" y2="1">
-                    <Stop offset="0" stopColor={C.sumColor} />
-                    <Stop offset="1" stopColor={C.accent} />
+                  <LinearGradient id="voiceOrb" x1="0" y1="0" x2="1" y2="1">
+                    <Stop offset="0" stopColor={C.primary} />
+                    <Stop offset="1" stopColor={C.sumColor} />
                   </LinearGradient>
                 </Defs>
-                <Circle cx={70} cy={70} r={70} fill="url(#orbGrad)" fillOpacity={listening ? 0.22 : 0.10} />
+                <Circle cx={ORB / 2} cy={ORB / 2} r={ORB / 2} fill="url(#voiceOrb)" />
               </Svg>
-              <MicIcon size={48} strokeWidth={1.6} color={listening ? C.primary : C.accent} />
+              {processing
+                ? <ActivityIndicator size="large" color={C.white} />
+                : <MicIcon size={48} strokeWidth={1.8} color={C.white} />}
             </StyledPressable>
           </Animated.View>
         </Stack>
 
-        {/* Status label */}
-        <Stack alignItems="center" marginBottom={28}>
-          <Stack horizontal alignItems="center" gap={8}>
-            {listening && <Animated.View style={[styles.liveDot, { backgroundColor: C.live, opacity: dotOpacity }]} />}
-            <Text variant="label" color={listening || processing ? C.primary : C.textSecondary}>
-              {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap the mic to start'}
-            </Text>
-          </Stack>
-          <Text variant="caption" color={C.textMuted} style={{ marginTop: 4 }}>
-            {sourceLang.toUpperCase()} → {targetLang.toUpperCase()}
+        {/* Waveform */}
+        <Stack horizontal gap={5} alignItems="flex-end" justifyContent="center" height={40} marginTop={6} marginBottom={14}>
+          {barHeights.map((height, i) => (
+            <Animated.View key={i} style={{
+              width: 5, height, borderRadius: 3,
+              backgroundColor: C.primary, opacity: listening ? 1 : 0.45,
+            }} />
+          ))}
+        </Stack>
+
+        {/* Status */}
+        <Stack alignItems="center" marginBottom={18}>
+          <Text variant="header" color={C.textPrimary} fontWeight="800">
+            {listening ? 'Listening…' : processing ? 'Translating…' : 'Tap the mic to start'}
+          </Text>
+          <Text variant="body" color={C.textMuted} style={{ marginTop: 4 }}>
+            Speak your phrase in {source.label}
           </Text>
         </Stack>
 
-        {/* Interim bubble while recording and translating — replaced by the result */}
-        {(listening || processing) && (
-          <StyledCard
-            backgroundColor={C.primaryBg} borderRadius={16} padding={14} marginBottom={16}
-            borderWidth={1} borderColor={C.border}
+        {/* Conversation */}
+        {showCard ? (
+          <StyledCard backgroundColor={C.bgCard} borderRadius={22} padding={18}
+            borderWidth={1} borderColor={C.border} shadow="light"
           >
-            <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>
-              {listening ? `LISTENING${'.'.repeat(dots)}` : 'TRANSLATING…'}
-            </Text>
-            {listening ? (
-              <Text variant="body" color={C.textSecondary}>Speak now… tap stop when done</Text>
-            ) : (
-              <Stack horizontal alignItems="center" gap={8}>
-                <ActivityIndicator size="small" color={C.primary} />
-                <Text variant="body" color={C.textSecondary}>Working out what you said</Text>
-              </Stack>
+            <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 1, marginBottom: 8 }}>YOU SAID</Text>
+            <Stack backgroundColor={C.primaryBg} borderRadius={16} padding={14}>
+              {listening ? (
+                <Text variant="body" color={C.textSecondary}>Speak now… tap stop when done</Text>
+              ) : processing ? (
+                <Stack horizontal alignItems="center" gap={8}>
+                  <ActivityIndicator size="small" color={C.primary} />
+                  <Text variant="body" color={C.textSecondary}>Working out what you said</Text>
+                </Stack>
+              ) : (
+                <Text variant="body" color={C.textPrimary} style={{ fontSize: 16, lineHeight: 24 }}>
+                  “{lastLine?.text}”
+                </Text>
+              )}
+            </Stack>
+
+            {hasResult && (
+              <>
+                <Text variant="overline" color={C.textMuted} textAlign="right" style={{ letterSpacing: 1, marginTop: 14, marginBottom: 8 }}>
+                  TRANSLATION
+                </Text>
+                <Stack alignSelf="flex-end" maxWidth="88%" backgroundColor={C.accentBg} borderRadius={16} padding={14}>
+                  <Text variant="body" color={C.textPrimary} style={{ fontSize: 16, lineHeight: 24 }}>{lastLine?.translated}</Text>
+                </Stack>
+              </>
             )}
           </StyledCard>
+        ) : (
+          <Text variant="bodySmall" color={C.textMuted} textAlign="center">Your conversation will appear here</Text>
         )}
 
-        {/* YOU SAID + TRANSLATION */}
-        {lastLine && !listening && !processing && (
-          <Stack gap={12} marginBottom={16}>
-            <StyledCard backgroundColor={C.primaryBg} borderRadius={16} padding={14} borderWidth={1} borderColor={C.border}>
-              <Text variant="overline" color={C.primary} style={{ letterSpacing: 0.8, marginBottom: 6 }}>YOU SAID</Text>
-              <Text variant="body" color={C.textPrimary}>{lastLine.text}</Text>
-            </StyledCard>
-            {lastLine.translated && (
-              <StyledCard backgroundColor={C.accentBg} borderRadius={16} padding={14} borderWidth={1} borderColor={C.border}>
-                <Text variant="overline" color={C.accent} style={{ letterSpacing: 0.8, marginBottom: 6 }}>TRANSLATION</Text>
-                <Text variant="body" color={C.textPrimary}>{lastLine.translated}</Text>
-              </StyledCard>
-            )}
-          </Stack>
-        )}
-
-        {transcript.length === 0 && !listening && !processing && (
-          <Text variant="bodySmall" color={C.textMuted} textAlign="center" style={{ paddingTop: 8 }}>
-            Your conversation will appear here
-          </Text>
-        )}
       </StyledScrollView>
 
-      {/* Bottom controls */}
-      <Stack horizontal alignItems="center" justifyContent="center" gap={40}
-        paddingHorizontal={32} paddingBottom={16} paddingTop={16}
-        borderTopWidth={1} borderTopColor={C.border} backgroundColor={C.bg}
+      {/* Controls — pinned below the scroll area so they're always reachable */}
+      <Stack horizontal alignItems="center" justifyContent="center" gap={22}
+        paddingTop={12} paddingBottom={14} backgroundColor={C.bg}
       >
-        <IconButton icon={BookmarkIcon} label="Save to phrasebook" onPress={handleSaveLast}
-          size={52} iconSize={20} color={C.primary} background={C.bgCard} disabled={!hasResult} />
+        <StyledPressable
+          width={58} height={58} borderRadius={29} alignItems="center" justifyContent="center"
+          backgroundColor={C.bgCard} borderWidth={1} borderColor={C.border}
+          onPress={handleSaveLast} disabled={!hasResult}
+          accessibilityRole="button" accessibilityLabel="Save to phrasebook"
+          style={{ opacity: hasResult ? 1 : 0.5 }}
+        >
+          <StarIcon size={24} strokeWidth={1.9} color={C.warning} />
+        </StyledPressable>
 
         <StyledPressable
-          width={70} height={70} borderRadius={35}
-          alignItems="center" justifyContent="center"
+          width={78} height={78} borderRadius={39} alignItems="center" justifyContent="center"
           backgroundColor={listening ? C.danger : C.primary}
           onPress={listening ? handleStop : handleStart}
           disabled={processing}
           accessibilityRole="button" accessibilityLabel={listening ? 'Stop recording' : 'Start recording'}
           style={{
             opacity: processing ? 0.6 : 1,
-            shadowColor: listening ? C.danger : C.primary, shadowOpacity: 0.4, shadowRadius: 16,
-            shadowOffset: { width: 0, height: 4 }, elevation: 8,
+            shadowColor: listening ? C.danger : C.primary, shadowOpacity: 0.4, shadowRadius: 18,
+            shadowOffset: { width: 0, height: 6 }, elevation: 8,
           }}
         >
           {listening
-            ? <StopIcon size={24} strokeWidth={2} color={C.white} />
-            : <MicIcon size={26} strokeWidth={2.2} color={C.white} />}
+            ? <StopIcon size={28} strokeWidth={2} color={C.black} />
+            : <MicIcon size={32} strokeWidth={2.2} color={C.white} />}
         </StyledPressable>
 
         <StyledPressable
-          width={52} height={52} borderRadius={26}
-          alignItems="center" justifyContent="center"
+          width={58} height={58} borderRadius={29} alignItems="center" justifyContent="center"
           backgroundColor={C.bgCard} borderWidth={1} borderColor={C.border}
           onPress={handleListen} disabled={!hasResult || ttsLoading}
           accessibilityRole="button" accessibilityLabel="Listen to translation"
-          style={{ opacity: !hasResult ? 0.5 : 1 }}
+          style={{ opacity: hasResult ? 1 : 0.5 }}
         >
           {ttsLoading
             ? <ActivityIndicator size="small" color={C.primary} />
-            : <SpeakerIcon size={20} strokeWidth={1.8} color={C.primary} />}
+            : <SpeakerIcon size={24} strokeWidth={1.9} color={C.textPrimary} />}
         </StyledPressable>
       </Stack>
     </StyledPage>
   )
 }
-
-const styles = StyleSheet.create({
-  liveDot: {
-    width: 8, height: 8, borderRadius: 4,
-  },
-  orb: {
-    width: 140, height: 140, borderRadius: 70,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2,
-    shadowOpacity: 0.4, shadowRadius: 28, shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-    backgroundColor: 'transparent',
-  },
-  glowRing: {
-    position: 'absolute',
-    width: 190, height: 190, borderRadius: 95,
-    borderWidth: 2,
-  },
-})

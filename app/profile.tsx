@@ -1,50 +1,53 @@
-import React from 'react'
+import React, { useCallback, useState } from 'react'
 import { Platform } from 'react-native'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
+import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
 import {
   StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable,
   toastService, dialogueService,
 } from 'fluent-styles'
 import { Text } from '../src/components/Text'
-import { ScreenHeader } from '../src/components/ScreenHeader'
-import { SectionLabel } from '../src/components/SectionLabel'
-import { useColors, useIsDark, type ThemeMode } from '../src/constants'
+import { useColors, useIsDark, type ThemeMode, type ThemeColors } from '../src/constants'
 import { useAuthStore, useThemeStore } from '../src/stores'
 import { usePremium } from '../src/hooks'
-import { authService } from '../src/services/api'
+import { authService, translateService, phrasebookService } from '../src/services/api'
 import { goBack } from '../src/utils'
 import {
-  MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon,
-  SparkleIcon, ChevronRightIcon, SunIcon, MoonIcon, DeviceIcon, type IconComponent,
+  MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon, SparkleIcon,
+  ChevronRightIcon, ChevronLeftIcon, SunIcon, MoonIcon, DeviceIcon, type IconComponent,
 } from '../src/icons'
 
-const APPEARANCE_OPTIONS: { mode: ThemeMode; label: string; Icon: IconComponent }[] = [
-  { mode: 'light',  label: 'Light',  Icon: SunIcon    },
-  { mode: 'dark',   label: 'Dark',   Icon: MoonIcon   },
-  { mode: 'system', label: 'System', Icon: DeviceIcon },
+// Each row icon gets its own accent so the list doesn't read as one colour
+type Tint = { color: string; bg: string }
+const tints = (C: ThemeColors) => ({
+  blue:   { color: C.sumColor,   bg: C.sumBg },
+  amber:  { color: C.flashColor, bg: C.flashBg },
+  purple: { color: C.quizColor,  bg: C.quizBg },
+  teal:   { color: C.primary,    bg: C.primaryBg },
+  orange: { color: C.mod4,       bg: C.mod4Bg },
+  red:    { color: C.danger,     bg: C.dangerBg },
+})
+
+const APPEARANCE: { mode: ThemeMode; label: string; Icon: IconComponent; tint: keyof ReturnType<typeof tints> }[] = [
+  { mode: 'light',  label: 'Light',  Icon: SunIcon,    tint: 'amber'  },
+  { mode: 'dark',   label: 'Dark',   Icon: MoonIcon,   tint: 'purple' },
+  { mode: 'system', label: 'System', Icon: DeviceIcon, tint: 'blue'   },
 ]
 
-function SettingRow({ Icon, label, value, onPress, danger, first }: {
-  Icon:     IconComponent
-  label:    string
-  value?:   string
-  onPress?: () => void
-  danger?:  boolean
-  first?:   boolean
+function SettingRow({ Icon, tint, label, value, onPress, danger, first }: {
+  Icon: IconComponent; tint: Tint; label: string; value?: string
+  onPress?: () => void; danger?: boolean; first?: boolean
 }) {
   const C = useColors()
-  const tint = danger ? C.danger : C.primary
   const row = (
     <Stack horizontal alignItems="center" gap={14} paddingVertical={14}
       borderTopWidth={first ? 0 : 1} borderTopColor={C.border}
     >
-      <Stack width={36} height={36} borderRadius={10} alignItems="center" justifyContent="center"
-        backgroundColor={danger ? C.dangerBg : C.primaryBg}
-      >
-        <Icon size={16} strokeWidth={2} color={tint} />
+      <Stack width={38} height={38} borderRadius={12} alignItems="center" justifyContent="center" backgroundColor={tint.bg}>
+        <Icon size={17} strokeWidth={2} color={tint.color} />
       </Stack>
       <Text variant="label" color={danger ? C.danger : C.textPrimary} style={{ flex: 1 }}>{label}</Text>
-      {!!value && <Text variant="caption" color={C.textMuted} numberOfLines={1} style={{ maxWidth: 180 }}>{value}</Text>}
+      {!!value && <Text variant="caption" color={C.textMuted} numberOfLines={1} style={{ maxWidth: 170 }}>{value}</Text>}
       {onPress && <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />}
     </Stack>
   )
@@ -53,27 +56,57 @@ function SettingRow({ Icon, label, value, onPress, danger, first }: {
     : row
 }
 
-function Group({ children }: { children: React.ReactNode }) {
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   const C = useColors()
   return (
-    <StyledCard backgroundColor={C.bgCard} borderRadius={16} paddingHorizontal={16} marginBottom={20}
-      borderWidth={1} borderColor={C.border}
-    >
-      {children}
-    </StyledCard>
+    <Stack marginBottom={22}>
+      <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 1, marginBottom: 8, marginLeft: 4 }}>{title}</Text>
+      <StyledCard backgroundColor={C.bgCard} borderRadius={18} paddingHorizontal={16} borderWidth={1} borderColor={C.border}>
+        {children}
+      </StyledCard>
+    </Stack>
+  )
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  const C = useColors()
+  return (
+    <Stack flex={1} alignItems="center" gap={2}>
+      <Text color={C.white} fontWeight="800" style={{ fontSize: 20 }}>{value}</Text>
+      <Text variant="caption" color="rgba(255,255,255,0.6)">{label}</Text>
+    </Stack>
   )
 }
 
 export default function ProfileScreen() {
   const C      = useColors()
   const isDark = useIsDark()
+  const T      = tints(C)
   const { user, logout } = useAuthStore()
   const { mode, setMode } = useThemeStore()
   const { isPremium } = usePremium()
+  const [stats, setStats] = useState<{ translations: number; phrases: number; languages: number } | null>(null)
 
   const name = user?.full_name?.trim() || 'Your account'
   const initial = (user?.full_name?.trim().charAt(0) || 'T').toUpperCase()
   const theme = isDark ? 'dark' : 'light'
+
+  // Real numbers from the account, refreshed each time the screen opens
+  useFocusEffect(useCallback(() => {
+    let cancelled = false
+    Promise.all([
+      translateService.history({ limit: 1 }).catch(() => null),
+      phrasebookService.list().catch(() => null),
+    ]).then(([history, phrases]) => {
+      if (cancelled) return
+      setStats({
+        translations: history?.total ?? 0,
+        phrases:      phrases?.length ?? 0,
+        languages:    new Set((phrases ?? []).map((p) => p.target_lang)).size,
+      })
+    })
+    return () => { cancelled = true }
+  }, []))
 
   const handleLogout = async () => {
     const ok = await dialogueService.confirm({
@@ -111,104 +144,135 @@ export default function ProfileScreen() {
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg}
+    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
+      statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
     >
-      <ScreenHeader title="Profile" onBackPress={() => goBack()} />
-
-      <StyledScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {/* Profile card */}
-        <Stack
-          backgroundColor={C.navy} borderRadius={20} padding={18} marginBottom={20}
-          horizontal alignItems="center" gap={14}
-          style={{ shadowColor: C.navy, shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}
-        >
-          <Stack width={52} height={52} borderRadius={26} backgroundColor={C.primary} alignItems="center" justifyContent="center">
-            <Text variant="title" color={C.white} fontWeight="800">{initial}</Text>
-          </Stack>
+      {/* Header */}
+      <StyledPage.Header.Full>
+        <Stack horizontal alignItems="center" gap={14} marginHorizontal={16} paddingBottom={14}>
+          <StyledPressable
+            width={44} height={44} borderRadius={12} alignItems="center" justifyContent="center"
+            backgroundColor={C.bgInput} onPress={() => goBack()}
+            accessibilityRole="button" accessibilityLabel="Go back"
+          >
+            <ChevronLeftIcon size={20} strokeWidth={2.4} color={C.textPrimary} />
+          </StyledPressable>
           <Stack flex={1}>
-            <Text variant="subtitle" color={C.white} fontWeight="700" numberOfLines={1}>{name}</Text>
-            <Text variant="caption" color="rgba(255,255,255,0.6)" numberOfLines={1} style={{ marginTop: 2 }}>
-              {user?.email ?? ''}
-            </Text>
+            <Text variant="title" color={C.textPrimary} fontWeight="800">Profile</Text>
+            <Text variant="bodySmall" color={C.textMuted}>Account &amp; settings</Text>
           </Stack>
-          {isPremium && (
-            <Stack horizontal alignItems="center" gap={4} backgroundColor={C.primary} borderRadius={8}
-              paddingHorizontal={8} paddingVertical={3}
-            >
-              <SparkleIcon size={11} strokeWidth={2.2} color={C.white} />
-              <Text variant="caption" color={C.white} fontWeight="700">Pro</Text>
+        </Stack>
+      </StyledPage.Header.Full>
+
+      <StyledScrollView
+        style={{ backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingTop: 18, paddingBottom: 40 }}
+      >
+        {/* Hero */}
+        <Stack backgroundColor={C.navy} borderRadius={24} padding={20} marginBottom={16} overflow="hidden"
+          style={{ shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}
+        >
+          <Stack position="absolute" top={-90} right={-70} width={220} height={220} borderRadius={110}
+            backgroundColor={`${C.primary}22`} pointerEvents="none" />
+          <Stack horizontal alignItems="center" gap={14}>
+            <Stack width={60} height={60} alignItems="center" justifyContent="center">
+              <Svg width={60} height={60} style={{ position: 'absolute' }}>
+                <Defs>
+                  <LinearGradient id="avatarRing" x1="0" y1="0" x2="1" y2="1">
+                    <Stop offset="0" stopColor={C.primary} />
+                    <Stop offset="1" stopColor={C.sumColor} />
+                  </LinearGradient>
+                </Defs>
+                <Circle cx={30} cy={30} r={30} fill="url(#avatarRing)" />
+              </Svg>
+              <Text color={C.white} fontWeight="800" style={{ fontSize: 24 }}>{initial}</Text>
             </Stack>
-          )}
+            <Stack flex={1} gap={2}>
+              <Text variant="subtitle" color={C.white} fontWeight="800" numberOfLines={1}>{name}</Text>
+              <Text variant="caption" color="rgba(255,255,255,0.6)" numberOfLines={1}>{user?.email ?? ''}</Text>
+              <Stack alignSelf="flex-start" horizontal alignItems="center" gap={4} marginTop={6}
+                backgroundColor={isPremium ? C.primary : 'rgba(255,255,255,0.12)'} borderRadius={8}
+                paddingHorizontal={8} paddingVertical={3}
+              >
+                {isPremium && <SparkleIcon size={11} strokeWidth={2.2} color={C.white} />}
+                <Text variant="caption" color={C.white} fontWeight="700">{isPremium ? 'Pro' : 'Free plan'}</Text>
+              </Stack>
+            </Stack>
+          </Stack>
+
+          <Stack horizontal marginTop={18} paddingTop={16} borderTopWidth={1} borderTopColor="rgba(255,255,255,0.1)">
+            <Stat value={stats ? String(stats.translations) : '–'} label="Translations" />
+            <Stack width={1} backgroundColor="rgba(255,255,255,0.1)" />
+            <Stat value={stats ? String(stats.phrases) : '–'} label="Saved phrases" />
+            <Stack width={1} backgroundColor="rgba(255,255,255,0.1)" />
+            <Stat value={stats ? String(stats.languages) : '–'} label="Languages" />
+          </Stack>
         </Stack>
 
-        {/* Tranquis Pro */}
-        <StyledPressable onPress={() => router.push('/premium' as any)} accessibilityRole="button" accessibilityLabel="Tranquis Pro">
-          <StyledCard backgroundColor={C.bgCard} borderRadius={16} padding={16} marginBottom={20}
-            borderWidth={1} borderColor={isPremium ? C.primary : C.border}
-          >
+        {/* Pro */}
+        <StyledPressable onPress={() => router.push('/premium' as any)} accessibilityRole="button" accessibilityLabel="Tranquis Pro"
+          marginBottom={24}
+        >
+          <Stack borderRadius={20} padding={16} overflow="hidden" backgroundColor={C.accentBg} borderWidth={1} borderColor={`${C.accent}40`}>
+            <Stack position="absolute" top={-60} right={-40} width={150} height={150} borderRadius={75}
+              backgroundColor={`${C.accent}18`} pointerEvents="none" />
             <Stack horizontal alignItems="center" gap={12}>
-              <Stack width={40} height={40} borderRadius={12} backgroundColor={C.primaryBg} alignItems="center" justifyContent="center">
-                <SparkleIcon size={18} strokeWidth={2} color={C.primary} />
+              <Stack width={44} height={44} borderRadius={14} alignItems="center" justifyContent="center" backgroundColor={C.accent}>
+                <SparkleIcon size={20} strokeWidth={2} color={C.white} />
               </Stack>
               <Stack flex={1}>
-                <Text variant="label" color={C.textPrimary} fontWeight="700">
-                  {isPremium ? 'Tranquis Pro' : 'Upgrade to Pro'}
+                <Text variant="label" color={C.textPrimary} fontWeight="800">
+                  {isPremium ? 'Tranquis Pro is active' : 'Upgrade to Tranquis Pro'}
                 </Text>
                 <Text variant="caption" color={C.textSecondary}>
-                  {isPremium ? 'Unlimited translations — thanks for your support' : '7-day free trial · Cancel anytime'}
+                  {isPremium ? 'Thanks for your support' : '7-day free trial · Cancel anytime'}
                 </Text>
               </Stack>
-              <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />
+              <ChevronRightIcon size={16} strokeWidth={2.2} color={C.accent} />
             </Stack>
-          </StyledCard>
+          </Stack>
         </StyledPressable>
 
-        <SectionLabel>Account</SectionLabel>
-        <Group>
-          <SettingRow first Icon={MailIcon} label="Email" value={user?.email ?? ''} />
-          <SettingRow Icon={LockIcon} label="Change password" onPress={() => router.push('/auth/forgot-password' as any)} />
+        <Group title="ACCOUNT">
+          <SettingRow first Icon={MailIcon} tint={T.blue} label="Email" value={user?.email ?? ''} />
+          <SettingRow Icon={LockIcon} tint={T.amber} label="Change password" onPress={() => router.push('/auth/forgot-password' as any)} />
         </Group>
 
-        <SectionLabel>Appearance</SectionLabel>
-        <Stack horizontal gap={10} marginBottom={20}>
-          {APPEARANCE_OPTIONS.map(({ mode: m, label, Icon }) => {
+        <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 1, marginBottom: 8, marginLeft: 4 }}>APPEARANCE</Text>
+        <Stack horizontal gap={10} marginBottom={22}>
+          {APPEARANCE.map(({ mode: m, label, Icon, tint }) => {
             const selected = mode === m
             return (
-              <StyledPressable
-                key={m} flex={1}
-                backgroundColor={selected ? C.navy : C.bgCard}
-                borderWidth={selected ? 2 : 1} borderColor={selected ? C.primary : C.border}
-                borderRadius={12} paddingVertical={14}
-                alignItems="center" gap={6}
-                onPress={() => setMode(m)}
+              <StyledPressable key={m} flex={1} onPress={() => setMode(m)}
                 accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`${label} appearance`}
               >
-                <Icon size={18} strokeWidth={2} color={selected ? C.white : C.textSecondary} />
-                <Text variant="caption" fontWeight="700" color={selected ? C.white : C.textSecondary}>{label}</Text>
+                <Stack alignItems="center" gap={8} paddingVertical={14} borderRadius={16}
+                  backgroundColor={C.bgCard} borderWidth={selected ? 2 : 1} borderColor={selected ? C.primary : C.border}
+                >
+                  <Stack width={34} height={34} borderRadius={11} alignItems="center" justifyContent="center" backgroundColor={T[tint].bg}>
+                    <Icon size={17} strokeWidth={2} color={T[tint].color} />
+                  </Stack>
+                  <Text variant="caption" fontWeight="700" color={selected ? C.primary : C.textSecondary}>{label}</Text>
+                </Stack>
               </StyledPressable>
             )
           })}
         </Stack>
 
-        <SectionLabel>Support</SectionLabel>
-        <Group>
-          <SettingRow first Icon={HelpCircleIcon} label="Help & Support" onPress={() => router.push('/help' as any)} />
-          <SettingRow Icon={ShieldIcon} label="Privacy Policy" onPress={() => router.push('/privacy' as any)} />
+        <Group title="SUPPORT">
+          <SettingRow first Icon={HelpCircleIcon} tint={T.purple} label="Help & Support" onPress={() => router.push('/help' as any)} />
+          <SettingRow Icon={ShieldIcon} tint={T.teal} label="Privacy Policy" onPress={() => router.push('/privacy' as any)} />
         </Group>
 
-        <Group>
-          <SettingRow first Icon={LogOutIcon} label="Sign out" onPress={handleLogout} danger />
-          <SettingRow Icon={TrashIcon} label="Delete account" onPress={handleDelete} danger />
+        <Group title="SESSION">
+          <SettingRow first Icon={LogOutIcon} tint={T.orange} label="Sign out" onPress={handleLogout} />
+          <SettingRow Icon={TrashIcon} tint={T.red} label="Delete account" onPress={handleDelete} danger />
         </Group>
 
-        {/* App info */}
-        <Stack alignItems="center" gap={6} style={{ marginTop: 8 }}>
-          <Stack width={36} height={36} borderRadius={12} backgroundColor={C.primaryBg} alignItems="center" justifyContent="center">
-            <SparkleIcon size={17} strokeWidth={2} color={C.primary} />
-          </Stack>
-          <Text variant="caption" color={C.textSecondary} fontWeight="700" style={{ marginTop: 4 }}>Tranquis v1.0.0</Text>
+        <Stack alignItems="center" gap={4} marginTop={4}>
+          <Text variant="caption" color={C.textSecondary} fontWeight="700">Tranquis v1.0.0</Text>
           <Text variant="caption" color={C.textMuted}>Translate anything, anywhere</Text>
         </Stack>
       </StyledScrollView>

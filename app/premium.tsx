@@ -1,247 +1,236 @@
 import React, { useState } from 'react'
 import { Platform } from 'react-native'
-import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable } from 'fluent-styles'
+import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
+import { StyledPage, StyledScrollView, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { GradientButton } from '../src/components/AuthUI'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
 import { goBack } from '../src/utils'
-import { XIcon, CheckIcon, SparkleIcon } from '../src/icons'
+import { ChevronLeftIcon, CheckIcon, GlobeIcon } from '../src/icons'
 
 type Plan = 'yearly' | 'monthly'
 
+// Shown until the App Store prices load (or if RevenueCat isn't configured)
+const FALLBACK = { monthly: '£4.99', yearly: '£39.99', yearlyPerMonth: '£3.33', saving: 'Save 33%' }
+
+// Only what Tranquis actually does today
 const FEATURES = [
-  'Unlimited translations — no daily limits',
-  'Live voice interpreter in real time',
-  'Camera & OCR translation',
-  'Text-to-speech playback',
-  'Unlimited phrasebook',
-  '60+ languages including rare & regional',
+  'Unlimited text, voice & camera translations',
+  'Tone-aware translations — casual, formal, business, travel',
+  'Explain any translation — word choices & grammar',
+  'Pronunciation guides for every saved phrase',
+  'Natural speech playback in 60+ languages',
+  'Unlimited phrasebook saves',
 ]
+
+// Teal-to-indigo medallion with soft halo rings
+function Medallion() {
+  const C = useColors()
+  const size = 92
+  return (
+    <Stack alignItems="center" justifyContent="center" width={size + 48} height={size + 48} alignSelf="center">
+      <Stack position="absolute" width={size + 48} height={size + 48} borderRadius={(size + 48) / 2}
+        borderWidth={1} borderColor={`${C.primary}22`} />
+      <Stack position="absolute" width={size + 22} height={size + 22} borderRadius={(size + 22) / 2}
+        borderWidth={1.5} borderColor={`${C.primary}40`} />
+      <Stack width={size} height={size} borderRadius={size / 2} alignItems="center" justifyContent="center"
+        style={{ shadowColor: C.sumColor, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}
+      >
+        <Svg width={size} height={size} style={{ position: 'absolute' }}>
+          <Defs>
+            <LinearGradient id="proMedallion" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={C.primary} />
+              <Stop offset="1" stopColor={C.sumColor} />
+            </LinearGradient>
+          </Defs>
+          <Circle cx={size / 2} cy={size / 2} r={size / 2} fill="url(#proMedallion)" />
+        </Svg>
+        <GlobeIcon size={44} strokeWidth={1.6} color={C.white} />
+      </Stack>
+    </Stack>
+  )
+}
+
+function Header() {
+  const C = useColors()
+  return (
+    <StyledPage.Header.Full>
+      <Stack horizontal alignItems="center" gap={14} marginHorizontal={16} paddingBottom={14}>
+        <StyledPressable
+          width={44} height={44} borderRadius={12} alignItems="center" justifyContent="center"
+          backgroundColor={C.bgInput} onPress={() => goBack('/profile')}
+          accessibilityRole="button" accessibilityLabel="Close"
+        >
+          <ChevronLeftIcon size={20} strokeWidth={2.4} color={C.textPrimary} />
+        </StyledPressable>
+        <Stack flex={1}>
+          <Text variant="title" color={C.textPrimary} fontWeight="800">Tranquis Pro</Text>
+          <Text variant="bodySmall" color={C.textMuted}>Unlock everything</Text>
+        </Stack>
+      </Stack>
+    </StyledPage.Header.Full>
+  )
+}
+
+function FeatureList() {
+  const C = useColors()
+  return (
+    <Stack gap={14}>
+      {FEATURES.map((feature) => (
+        <Stack key={feature} horizontal alignItems="flex-start" gap={12}>
+          <Stack width={22} height={22} borderRadius={11} alignItems="center" justifyContent="center"
+            backgroundColor={C.primaryBg} style={{ marginTop: 1 }}
+          >
+            <CheckIcon size={13} strokeWidth={2.8} color={C.primary} />
+          </Stack>
+          <Text variant="body" color={C.textPrimary} style={{ flex: 1, fontSize: 15, lineHeight: 22 }}>{feature}</Text>
+        </Stack>
+      ))}
+    </Stack>
+  )
+}
+
+function PlanCard({ title, subtitle, price, per, note, saving, popular, selected, onPress }: {
+  title: string; subtitle: string; price: string; per: string; note?: string; saving?: string
+  popular?: boolean; selected: boolean; onPress: () => void
+}) {
+  const C = useColors()
+  return (
+    <StyledPressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={title}>
+      <Stack borderRadius={18} paddingHorizontal={18} paddingVertical={18}
+        backgroundColor={selected ? C.primaryBg : C.bgCard}
+        borderWidth={2} borderColor={selected ? C.primary : C.border}
+        style={selected ? { shadowColor: C.primary, shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 } : undefined}
+      >
+        {popular && (
+          <Stack position="absolute" top={-13} alignSelf="center" backgroundColor={C.accent} borderRadius={12}
+            paddingHorizontal={12} paddingVertical={4}
+          >
+            <Text variant="caption" color={C.white} fontWeight="800" style={{ letterSpacing: 0.8, fontSize: 11 }}>MOST POPULAR</Text>
+          </Stack>
+        )}
+        <Stack horizontal alignItems="center" justifyContent="space-between" gap={12}>
+          <Stack flex={1} gap={3}>
+            <Text variant="subtitle" color={C.textPrimary} fontWeight="800">{title}</Text>
+            <Text variant="bodySmall" color={C.textMuted}>{subtitle}</Text>
+          </Stack>
+          <Stack alignItems="flex-end" gap={2}>
+            <Text color={C.textPrimary} fontWeight="800" style={{ fontSize: 24 }}>
+              {price}<Text variant="bodySmall" color={C.textMuted} fontWeight="500">{per}</Text>
+            </Text>
+            {!!note && <Text variant="caption" color={C.textMuted}>{note}</Text>}
+            {!!saving && (
+              <Stack backgroundColor={C.successBg} borderRadius={10} paddingHorizontal={8} paddingVertical={2} marginTop={2}>
+                <Text variant="caption" color={C.success} fontWeight="700">{saving}</Text>
+              </Stack>
+            )}
+          </Stack>
+        </Stack>
+      </Stack>
+    </StyledPressable>
+  )
+}
 
 export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const { isPremium, buyMonthly, buyYearly, restore, loading } = usePremium()
-
+  const { isPremium, plan: activePlan, buyMonthly, buyYearly, restore, loading, monthlyPrice, yearlyPrice } = usePremium()
   const [plan, setPlan] = useState<Plan>('yearly')
 
-  const handlePurchase = () => {
-    if (plan === 'yearly') buyYearly()
-    else buyMonthly()
-  }
+  const monthly = monthlyPrice ?? FALLBACK.monthly
+  const yearly  = yearlyPrice ?? FALLBACK.yearly
 
-  if (isPremium) {
-    return (
-      <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
-        statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      >
-        <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={16}>
-          <Stack width={84} height={84} borderRadius={42} alignItems="center" justifyContent="center" backgroundColor={C.primaryBg}>
-            <SparkleIcon size={40} strokeWidth={1.8} color={C.primary} />
-          </Stack>
-          <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
-            You're on Pro!
-          </Text>
-          <Text variant="body" color={C.textSecondary} textAlign="center">
-            Enjoy unlimited translations and all Pro features.
-          </Text>
-          <Stack alignSelf="stretch" marginTop={8}>
-            <GradientButton label="Go back" arrow={false} onPress={() => goBack()} />
-          </Stack>
-        </Stack>
-      </StyledPage>
-    )
-  }
-
-  return (
-    <StyledPage flex={1} backgroundColor={C.navy} showStatusBar
-      statusBarStyle="light-content"
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.navy : undefined}
+  const page = (children: React.ReactNode) => (
+    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
+      statusBarStyle={isDark ? 'light-content' : 'dark-content'}
+      statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
     >
+      <Header />
       <StyledScrollView
+        style={{ borderTopWidth: 1, borderTopColor: C.border }}
         showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: C.bg }}
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
       >
-        {/* Hero — a fixed dark surface with a soft glow, as on NailBid's hero cards */}
-        <Stack paddingHorizontal={20} paddingBottom={24} overflow="hidden" backgroundColor={C.navy}>
-          <Stack
-            position="absolute" top={-110} right={-90} width={260} height={260} borderRadius={999}
-            backgroundColor={`${C.primary}1F`} pointerEvents="none"
-          />
-          {/* Close */}
-          <StyledPressable onPress={() => goBack()}
-            position="absolute" top={16} right={20} zIndex={10}
-            width={36} height={36} borderRadius={18} alignItems="center" justifyContent="center"
-            backgroundColor="rgba(255,255,255,0.12)"
-            accessibilityRole="button" accessibilityLabel="Close"
-          >
-            <XIcon size={20} strokeWidth={2.2} color={C.white} />
-          </StyledPressable>
-
-          {/* Globe emoji hero */}
-          <Stack alignItems="center" gap={16} paddingTop={40} paddingBottom={28}>
-            <Stack width={96} height={96} borderRadius={48} alignItems="center" justifyContent="center"
-              backgroundColor="rgba(255,255,255,0.08)" borderWidth={1} borderColor="rgba(255,255,255,0.14)"
-            >
-              <SparkleIcon size={46} strokeWidth={1.6} color={C.primaryLight} />
-            </Stack>
-            <Stack alignItems="center" gap={8}>
-              <Text
-                variant="header"
-                fontWeight="800"
-                textAlign="center"
-                color={C.white}
-                style={{ fontSize: 26, lineHeight: 34 }}
-              >
-                Speak every language,{'\n'}anywhere
-              </Text>
-              <Text variant="body" textAlign="center" color="rgba(255,255,255,0.6)">
-                Unlock the full Tranquis experience
-              </Text>
-            </Stack>
-          </Stack>
-        </Stack>
-
-        <Stack paddingHorizontal={20} paddingTop={24} gap={0}>
-
-          {/* Plan selector */}
-          <Stack gap={12} marginBottom={24}>
-            {/* Annual — first, with MOST POPULAR badge */}
-            <StyledPressable onPress={() => setPlan('yearly')} accessibilityRole="button" accessibilityState={{ selected: plan === 'yearly' }} accessibilityLabel="Pro Annual">
-              <Stack
-                borderRadius={18} padding={18}
-                style={[
-                  {
-                    borderColor: plan === 'yearly' ? C.primary : C.border,
-                    borderWidth: plan === 'yearly' ? 2 : 1,
-                    backgroundColor: plan === 'yearly' ? `${C.primary}10` : C.bgCard,
-                  },
-                ]}
-              >
-                <Stack horizontal alignItems="center" justifyContent="space-between" paddingRight={34}>
-                  <Stack gap={3}>
-                    <Stack horizontal alignItems="center" gap={10}>
-                      <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
-                      {/* MOST POPULAR badge */}
-                      <Stack
-                        backgroundColor={C.primary} borderRadius={6}
-                        paddingHorizontal={8} paddingVertical={3}
-                      >
-                        <Text variant="caption" color={C.white} fontWeight="700" style={{ fontSize: 10, letterSpacing: 0.5 }}>
-                          MOST POPULAR
-                        </Text>
-                      </Stack>
-                    </Stack>
-                    <Text variant="caption" color={C.textMuted}>£3.33/mo · billed annually</Text>
-                  </Stack>
-                  <Stack alignItems="flex-end" gap={2}>
-                    <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
-                    <Text variant="caption" color={C.live} fontWeight="600">Save 33%</Text>
-                  </Stack>
-                </Stack>
-                {/* Radio */}
-                <Stack position="absolute" top={18} right={16}>
-                  <Stack
-                    width={22} height={22} borderRadius={11}
-                    alignItems="center" justifyContent="center"
-                    backgroundColor={plan === 'yearly' ? C.primary : 'transparent'}
-                    style={{ borderWidth: 2, borderColor: plan === 'yearly' ? C.primary : C.border }}
-                  >
-                    {plan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor={C.white} />}
-                  </Stack>
-                </Stack>
-              </Stack>
-            </StyledPressable>
-
-            {/* Monthly */}
-            <StyledPressable onPress={() => setPlan('monthly')} accessibilityRole="button" accessibilityState={{ selected: plan === 'monthly' }} accessibilityLabel="Pro Monthly">
-              <Stack
-                borderRadius={18} padding={18}
-                style={[
-                  {
-                    borderColor: plan === 'monthly' ? C.primary : C.border,
-                    borderWidth: plan === 'monthly' ? 2 : 1,
-                    backgroundColor: plan === 'monthly' ? `${C.primary}10` : C.bgCard,
-                  },
-                ]}
-              >
-                <Stack horizontal alignItems="center" justifyContent="space-between" paddingRight={34}>
-                  <Stack gap={3}>
-                    <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
-                    <Text variant="caption" color={C.textMuted}>Billed monthly</Text>
-                  </Stack>
-                  <Stack alignItems="flex-end" gap={2}>
-                    <Text variant="title" color={C.textPrimary} fontWeight="800">£4.99</Text>
-                    <Text variant="caption" color={C.textMuted}>per month</Text>
-                  </Stack>
-                </Stack>
-                <Stack position="absolute" top={18} right={16}>
-                  <Stack
-                    width={22} height={22} borderRadius={11}
-                    alignItems="center" justifyContent="center"
-                    backgroundColor={plan === 'monthly' ? C.primary : 'transparent'}
-                    style={{ borderWidth: 2, borderColor: plan === 'monthly' ? C.primary : C.border }}
-                  >
-                    {plan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor={C.white} />}
-                  </Stack>
-                </Stack>
-              </Stack>
-            </StyledPressable>
-          </Stack>
-
-          {/* Feature checklist */}
-          <StyledCard
-            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginBottom={24}
-            gap={14} borderWidth={1} borderColor={C.border}
-          >
-            {FEATURES.map((feature) => (
-              <Stack key={feature} horizontal alignItems="center" gap={12}>
-                <Stack
-                  width={22} height={22} borderRadius={11}
-                  alignItems="center" justifyContent="center"
-                  backgroundColor={`${C.primary}20`}
-                >
-                  <CheckIcon size={13} strokeWidth={2.6} color={C.primary} />
-                </Stack>
-                <Text variant="bodySmall" color={C.textPrimary} fontWeight="500" style={{ flex: 1 }}>
-                  {feature}
-                </Text>
-              </Stack>
-            ))}
-          </StyledCard>
-
-          {/* CTA button */}
-          <GradientButton label="Start free 7-day trial" onPress={handlePurchase} loading={loading} />
-          <Text
-            variant="caption"
-            color={C.textMuted}
-            textAlign="center"
-            style={{ marginTop: 10, marginBottom: 6 }}
-          >
-            {plan === 'yearly' ? '£39.99/year after trial · ' : '£4.99/month after trial · '}
-            Cancel anytime
-          </Text>
-
-          {/* Restore */}
-          <StyledPressable onPress={restore} alignSelf="center" marginTop={8} accessibilityRole="button" accessibilityLabel="Restore purchases">
-            <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
-          </StyledPressable>
-
-          {/* Legal */}
-          <Text
-            variant="caption"
-            color={C.textMuted}
-            textAlign="center"
-            style={{ marginTop: 20, lineHeight: 18, paddingHorizontal: 8 }}
-          >
-            Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically
-            renews unless auto-renew is turned off at least 24 hours before the end of the current period.
-          </Text>
-        </Stack>
+        {children}
       </StyledScrollView>
     </StyledPage>
   )
-}
 
+  if (isPremium) {
+    return page(
+      <>
+        <Medallion />
+        <Text variant="display" color={C.textPrimary} fontWeight="800" textAlign="center" style={{ fontSize: 28, lineHeight: 34, marginTop: 18 }}>
+          You're on Pro
+        </Text>
+        <Text variant="body" color={C.textMuted} textAlign="center" style={{ marginTop: 8, marginBottom: 28 }}>
+          {activePlan ? `Your ${activePlan} plan is active. ` : ''}Thanks for supporting Tranquis.
+        </Text>
+        <FeatureList />
+        <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 28, lineHeight: 18 }}>
+          Manage or cancel your subscription in Settings › Apple ID › Subscriptions.
+        </Text>
+      </>,
+    )
+  }
+
+  return page(
+    <>
+      <Medallion />
+      <Text variant="display" color={C.textPrimary} fontWeight="800" textAlign="center" style={{ fontSize: 30, lineHeight: 36, marginTop: 16 }}>
+        Speak every language,{'\n'}anywhere
+      </Text>
+      <Text variant="body" color={C.textMuted} textAlign="center" style={{ fontSize: 16, lineHeight: 24, marginTop: 10, marginBottom: 30, paddingHorizontal: 8 }}>
+        Unlimited translations, voice and camera, explanations and pronunciation — all in one place.
+      </Text>
+
+      <Stack gap={16} marginBottom={28}>
+        <PlanCard
+          popular
+          title="Pro Annual"
+          subtitle="Billed annually · cancel anytime"
+          price={yearlyPrice ? yearly : FALLBACK.yearlyPerMonth}
+          per={yearlyPrice ? '/yr' : '/mo'}
+          note={yearlyPrice ? undefined : `${FALLBACK.yearly}/year`}
+          saving={FALLBACK.saving}
+          selected={plan === 'yearly'}
+          onPress={() => setPlan('yearly')}
+        />
+        <PlanCard
+          title="Pro Monthly"
+          subtitle="Billed monthly · cancel anytime"
+          price={monthly}
+          per="/mo"
+          note={`${monthly}/month`}
+          selected={plan === 'monthly'}
+          onPress={() => setPlan('monthly')}
+        />
+      </Stack>
+
+      <FeatureList />
+
+      <Stack marginTop={30}>
+        <GradientButton
+          label="Start Free 7-Day Trial"
+          loading={loading}
+          onPress={() => (plan === 'yearly' ? buyYearly() : buyMonthly())}
+        />
+      </Stack>
+      <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 12 }}>
+        Then {plan === 'yearly' ? `${yearly}/year` : `${monthly}/month`}. Cancel in Settings anytime before renewal.
+      </Text>
+
+      <StyledPressable onPress={restore} alignSelf="center" marginTop={16} padding={6}
+        accessibilityRole="button" accessibilityLabel="Restore purchases"
+      >
+        <Text variant="bodySmall" color={C.primary} fontWeight="700">Restore purchases</Text>
+      </StyledPressable>
+
+      <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 18, lineHeight: 17, paddingHorizontal: 8, opacity: 0.8 }}>
+        Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically
+        unless auto-renew is turned off at least 24 hours before the end of the current period.
+      </Text>
+    </>,
+  )
+}

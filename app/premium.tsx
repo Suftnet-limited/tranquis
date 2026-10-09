@@ -16,7 +16,7 @@ const FEATURES = [
   'Camera & OCR translation',
   'Text-to-speech playback',
   'Unlimited phrasebook',
-  '60+ languages including rare & regional',
+  '20+ languages including rare & regional',
 ]
 
 export default function PremiumScreen() {

@@ -4,7 +4,7 @@ export { LightColors as Colors, DarkColors } from './themes'
 export type { ThemeColors } from './themes'
 export { useColors, getColors, useIsDark } from './useColors'
 export type { ThemeMode } from '../stores'
-export { LANGUAGES, TONES, getLang, DEFAULT_SOURCE, DEFAULT_TARGET } from './languages'
+export { LANGUAGES, TONES, getLang, findLang, DEFAULT_SOURCE, DEFAULT_TARGET } from './languages'
 export type { Language, TranslationTone } from './languages'
 export { PREMIUM_PRICING } from './premium'
 

@@ -46,3 +46,11 @@ export const TONES: { key: TranslationTone; label: string; icon: string }[] = [
 export function getLang(code: string): Language {
   return LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0]
 }
+
+/** Match a language by code ("fr") or English name ("French") — camera results
+ *  store the detected language by name. Undefined when it isn't in the list. */
+export function findLang(codeOrName: string | null | undefined): Language | undefined {
+  const key = (codeOrName ?? '').trim().toLowerCase()
+  if (!key) return undefined
+  return LANGUAGES.find((l) => l.code.toLowerCase() === key || l.label.toLowerCase() === key)
+}

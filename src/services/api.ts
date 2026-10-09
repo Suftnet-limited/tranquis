@@ -263,11 +263,12 @@ export interface Phrase {
   id:             string
   source_text:    string
   translated_text: string
-  phonetic?:      string
+  phonetic?:      string | null
   source_lang:    string
   target_lang:    string
-  category:       string
-  saved_at:       string
+  category:       string | null
+  section?:       string | null
+  created_at:     string
 }
 
 export const phrasebookService = {

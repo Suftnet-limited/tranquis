@@ -257,6 +257,24 @@ export const MoonIcon = make(({ color, strokeWidth }) => (
   <Path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" {...line(color, strokeWidth)} />
 ))
 
+// ─── Phrasebook categories ────────────────────────────────────────────────────
+
+export const PlaneIcon = make(({ color, strokeWidth }) => (
+  <Path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" {...line(color, strokeWidth)} />
+))
+export const UtensilsIcon = make(({ color, strokeWidth }) => (
+  <Path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" {...line(color, strokeWidth)} />
+))
+export const BedIcon = make(({ color, strokeWidth }) => (
+  <Path d="M2 4v16M2 8h18a2 2 0 012 2v10M2 17h20M6 8v9" {...line(color, strokeWidth)} />
+))
+export const MedicalIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Rect x="3" y="3" width="18" height="18" rx="4" {...line(color, strokeWidth)} />
+    <Path d="M12 8v8M8 12h8" {...line(color, strokeWidth)} />
+  </>
+))
+
 // Looks up an icon by the short names stored in data (tones, help items…)
 export const ICONS = {
   translate: TranslateIcon, mic: MicIcon, camera: CameraIcon, book: BookIcon, clock: ClockIcon,
@@ -269,6 +287,7 @@ export const ICONS = {
   'map-pin': MapPinIcon, briefcase: BriefcaseIcon, smile: SmileIcon, 'trending-up': TrendUpIcon, type: TypeIcon,
   info: InfoIcon, help: HelpCircleIcon, shield: ShieldIcon, 'file-text': FileTextIcon, 'log-out': LogOutIcon,
   sun: SunIcon, moon: MoonIcon, device: DeviceIcon,
+  plane: PlaneIcon, utensils: UtensilsIcon, bed: BedIcon, medical: MedicalIcon,
 } satisfies Record<string, IconComponent>
 
 export type IconName = keyof typeof ICONS

@@ -13,12 +13,13 @@ interface ActionChipProps {
   danger?:   boolean
   disabled?: boolean
   background?: string
+  iconColor?: string   // gives each chip in a row its own accent
 }
 
 // Small icon + label pill for result actions (Listen, Copy, Save, Delete…)
-export function ActionChip({ icon: Icon, label, onPress, loading, danger, disabled, background }: ActionChipProps) {
+export function ActionChip({ icon: Icon, label, onPress, loading, danger, disabled, background, iconColor }: ActionChipProps) {
   const C = useColors()
-  const tint = danger ? C.danger : C.primary
+  const tint = danger ? C.danger : iconColor ?? C.primary
   return (
     <StyledPressable
       onPress={onPress} disabled={disabled || loading}

@@ -275,6 +275,17 @@ export const MedicalIcon = make(({ color, strokeWidth }) => (
   </>
 ))
 
+export const WalletIcon = make(({ color, strokeWidth }) => (
+  <>
+    <Path d="M20 7V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h13a2 2 0 002-2v-2" {...line(color, strokeWidth)} />
+    <Path d="M21 8h-5a4 4 0 000 8h5a1 1 0 001-1V9a1 1 0 00-1-1z" {...line(color, strokeWidth)} />
+    <Circle cx="16" cy="12" r="0.6" stroke={color} strokeWidth={strokeWidth} fill={color} />
+  </>
+))
+export const HeartIcon = make(({ color, strokeWidth }) => (
+  <Path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 000-7.8z" {...line(color, strokeWidth)} />
+))
+
 // Looks up an icon by the short names stored in data (tones, help items…)
 export const ICONS = {
   translate: TranslateIcon, mic: MicIcon, camera: CameraIcon, book: BookIcon, clock: ClockIcon,
@@ -287,7 +298,7 @@ export const ICONS = {
   'map-pin': MapPinIcon, briefcase: BriefcaseIcon, smile: SmileIcon, 'trending-up': TrendUpIcon, type: TypeIcon,
   info: InfoIcon, help: HelpCircleIcon, shield: ShieldIcon, 'file-text': FileTextIcon, 'log-out': LogOutIcon,
   sun: SunIcon, moon: MoonIcon, device: DeviceIcon,
-  plane: PlaneIcon, utensils: UtensilsIcon, bed: BedIcon, medical: MedicalIcon,
+  plane: PlaneIcon, utensils: UtensilsIcon, bed: BedIcon, medical: MedicalIcon, wallet: WalletIcon, heart: HeartIcon,
 } satisfies Record<string, IconComponent>
 
 export type IconName = keyof typeof ICONS

@@ -12,27 +12,29 @@ import { useTranslate, useTTS } from '../../src/hooks'
 import { translateService } from '../../src/services/api'
 import {
   GearIcon, SwapIcon, MicIcon, CameraIcon, ClipboardIcon, XIcon, ArrowRightIcon, ChevronRightIcon,
-  SpeakerIcon, CopyIcon, StarIcon, InfoIcon,
+  SpeakerIcon, CopyIcon, StarIcon, InfoIcon, UtensilsIcon, BedIcon, MedicalIcon, WalletIcon, HeartIcon,
+  type IconComponent,
 } from '../../src/icons'
 
 const MAX_CHARS = 5000
 
 // Shown with their translation underneath when translating from English into
 // one of these languages; other pairs show "Tap to translate"
-const QUICK_PHRASES: { emoji: string; text: string; tr: Record<string, string> }[] = [
-  { emoji: '🍽️', text: 'A table for two, please', tr: {
+type Accent = 'amber' | 'purple' | 'red' | 'green' | 'pink'
+const QUICK_PHRASES: { Icon: IconComponent; accent: Accent; text: string; tr: Record<string, string> }[] = [
+  { Icon: UtensilsIcon, accent: 'amber', text: 'A table for two, please', tr: {
     es: 'Una mesa para dos, por favor', fr: 'Une table pour deux, s’il vous plaît', de: 'Einen Tisch für zwei, bitte',
     it: 'Un tavolo per due, per favore', pt: 'Uma mesa para dois, por favor' } },
-  { emoji: '🏨', text: 'I have a reservation', tr: {
+  { Icon: BedIcon, accent: 'purple', text: 'I have a reservation', tr: {
     es: 'Tengo una reserva', fr: 'J’ai une réservation', de: 'Ich habe eine Reservierung',
     it: 'Ho una prenotazione', pt: 'Tenho uma reserva' } },
-  { emoji: '🏥', text: 'Where is the nearest hospital?', tr: {
+  { Icon: MedicalIcon, accent: 'red', text: 'Where is the nearest hospital?', tr: {
     es: '¿Dónde está el hospital más cercano?', fr: 'Où est l’hôpital le plus proche ?', de: 'Wo ist das nächste Krankenhaus?',
     it: 'Dov’è l’ospedale più vicino?', pt: 'Onde fica o hospital mais próximo?' } },
-  { emoji: '💰', text: 'How much does this cost?', tr: {
+  { Icon: WalletIcon, accent: 'green', text: 'How much does this cost?', tr: {
     es: '¿Cuánto cuesta esto?', fr: 'Combien ça coûte ?', de: 'Wie viel kostet das?',
     it: 'Quanto costa questo?', pt: 'Quanto custa isto?' } },
-  { emoji: '🙏', text: 'Thank you very much', tr: {
+  { Icon: HeartIcon, accent: 'pink', text: 'Thank you very much', tr: {
     es: 'Muchas gracias', fr: 'Merci beaucoup', de: 'Vielen Dank', it: 'Grazie mille', pt: 'Muito obrigado' } },
 ]
 
@@ -46,8 +48,15 @@ function LangCard({ code, onPress }: { code: string; onPress: () => void }) {
         backgroundColor={C.bgInput} borderRadius={14} paddingHorizontal={14} paddingVertical={13}
         borderWidth={1} borderColor={C.border}
       >
-        <Text style={{ fontSize: 22 }}>{lang.flag}</Text>
-        <Text variant="subtitle" color={C.textPrimary} fontWeight="700" numberOfLines={1} style={{ flex: 1 }}>{lang.label}</Text>
+        {/* Fixed box + matching line heights keep the emoji flag and the name on one centre line */}
+        <Stack width={28} height={28} alignItems="center" justifyContent="center">
+          <Text style={{ fontSize: 22, lineHeight: 28, textAlign: 'center' }}>{lang.flag}</Text>
+        </Stack>
+        <Text variant="subtitle" color={C.textPrimary} fontWeight="700" numberOfLines={1}
+          style={{ flex: 1, lineHeight: 28 }}
+        >
+          {lang.label}
+        </Text>
       </Stack>
     </StyledPressable>
   )
@@ -60,6 +69,13 @@ export default function TranslateScreen() {
   const { sourceLang, targetLang, tone, setTone, swapLangs } = useTranslatorStore()
   const { translate, saveToPhrasebook, loading, result, clear } = useTranslate()
   const { speak, loading: ttsLoading } = useTTS()
+  const ACCENTS: Record<Accent, { color: string; bg: string }> = {
+    amber:  { color: C.flashColor, bg: C.flashBg },
+    purple: { color: C.quizColor,  bg: C.quizBg },
+    red:    { color: C.danger,     bg: C.dangerBg },
+    green:  { color: C.primary,    bg: C.primaryBg },
+    pink:   { color: C.mod4,       bg: C.mod4Bg },
+  }
 
   const [text, setText] = useState('')
   const [explanation, setExplanation] = useState<string | null>(null)
@@ -252,11 +268,11 @@ export default function TranslateScreen() {
             )}
 
             <Stack horizontal gap={6} flexWrap="wrap">
-              <ActionChip icon={SpeakerIcon} label="Listen" background={C.bgCard} loading={ttsLoading}
+              <ActionChip icon={SpeakerIcon} label="Listen" background={C.bgCard} iconColor={C.sumColor} loading={ttsLoading}
                 onPress={() => speak(result.translated_text, result.target_lang)} />
-              <ActionChip icon={CopyIcon} label="Copy" background={C.bgCard} onPress={handleCopy} />
-              <ActionChip icon={StarIcon} label="Save" background={C.bgCard} onPress={() => saveToPhrasebook(result)} />
-              <ActionChip icon={InfoIcon} label={explanation ? 'Hide' : 'Explain'} background={C.bgCard}
+              <ActionChip icon={CopyIcon} label="Copy" background={C.bgCard} iconColor={C.quizColor} onPress={handleCopy} />
+              <ActionChip icon={StarIcon} label="Save" background={C.bgCard} iconColor={C.flashColor} onPress={() => saveToPhrasebook(result)} />
+              <ActionChip icon={InfoIcon} label={explanation ? 'Hide' : 'Explain'} background={C.bgCard} iconColor={C.primary}
                 loading={explaining} onPress={handleExplain} />
             </Stack>
           </Stack>
@@ -268,7 +284,7 @@ export default function TranslateScreen() {
             QUICK PHRASES
           </Text>
           <Stack gap={10}>
-            {QUICK_PHRASES.map(({ emoji, text: phrase, tr }) => (
+            {QUICK_PHRASES.map(({ Icon, accent, text: phrase, tr }) => (
               <StyledPressable key={phrase} onPress={() => handleQuickPhrase(phrase)}
                 accessibilityRole="button" accessibilityLabel={`Translate: ${phrase}`}
               >
@@ -276,7 +292,11 @@ export default function TranslateScreen() {
                   borderWidth={1} borderColor={C.border}
                 >
                   <Stack horizontal alignItems="center" gap={14}>
-                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                    <Stack width={42} height={42} borderRadius={13} alignItems="center" justifyContent="center"
+                      backgroundColor={ACCENTS[accent].bg}
+                    >
+                      <Icon size={20} strokeWidth={2} color={ACCENTS[accent].color} />
+                    </Stack>
                     <Stack flex={1} gap={2}>
                       <Text variant="label" color={C.textPrimary}>{phrase}</Text>
                       <Text variant="bodySmall" color={C.textMuted} numberOfLines={1}>{phraseHint(tr)}</Text>

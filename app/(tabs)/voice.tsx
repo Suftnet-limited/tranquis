@@ -166,7 +166,7 @@ export default function VoiceScreen() {
   const showCard  = listening || processing || !!lastLine
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
+    <StyledPage flex={1} edges={['top', 'left', 'right']} backgroundColor={C.bgCard} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
     >

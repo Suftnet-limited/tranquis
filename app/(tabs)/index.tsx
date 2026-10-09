@@ -37,20 +37,17 @@ const QUICK_PHRASES: { emoji: string; text: string; tr: Record<string, string> }
 ]
 
 // ─── Language pair ────────────────────────────────────────────────────────────
-function LangCard({ code, caption, onPress }: { code: string; caption: string; onPress: () => void }) {
+function LangCard({ code, onPress }: { code: string; onPress: () => void }) {
   const C = useColors()
   const lang = getLang(code)
   return (
     <StyledPressable flex={1} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Change language, ${lang.label}`}>
       <Stack horizontal alignItems="center" gap={10}
-        backgroundColor={C.bgInput} borderRadius={14} paddingHorizontal={14} paddingVertical={10}
+        backgroundColor={C.bgInput} borderRadius={14} paddingHorizontal={14} paddingVertical={13}
         borderWidth={1} borderColor={C.border}
       >
         <Text style={{ fontSize: 22 }}>{lang.flag}</Text>
-        <Stack flex={1}>
-          <Text variant="subtitle" color={C.textPrimary} fontWeight="700" numberOfLines={1}>{lang.label}</Text>
-          <Text variant="caption" color={C.textMuted} fontWeight="600" style={{ letterSpacing: 0.6 }}>{caption}</Text>
-        </Stack>
+        <Text variant="subtitle" color={C.textPrimary} fontWeight="700" numberOfLines={1} style={{ flex: 1 }}>{lang.label}</Text>
       </Stack>
     </StyledPressable>
   )
@@ -119,6 +116,7 @@ export default function TranslateScreen() {
   return (
     <StyledPage
       flex={1}
+      edges={['top', 'left', 'right']}
       backgroundColor={C.bgCard}
       showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
@@ -141,10 +139,10 @@ export default function TranslateScreen() {
       <Stack horizontal alignItems="center" gap={10} paddingHorizontal={16} paddingVertical={14}
         borderTopWidth={1} borderBottomWidth={1} borderColor={C.border}
       >
-        <LangCard code={sourceLang} caption="FROM" onPress={() => openPicker('source')} />
+        <LangCard code={sourceLang} onPress={() => openPicker('source')} />
         <IconButton icon={SwapIcon} label="Swap languages" onPress={swapLangs}
           size={44} iconSize={18} color={C.white} background={C.primary} />
-        <LangCard code={targetLang} caption="TO" onPress={() => openPicker('target')} />
+        <LangCard code={targetLang} onPress={() => openPicker('target')} />
       </Stack>
 
       <StyledScrollView

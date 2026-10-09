@@ -11,7 +11,7 @@ import { ScreenHeader } from '../../src/components/ScreenHeader'
 import { EmptyState } from '../../src/components/EmptyState'
 import { IconButton } from '../../src/components/IconButton'
 import { ActionChip } from '../../src/components/ActionChip'
-import { useColors, useIsDark, getLang, type ThemeColors } from '../../src/constants'
+import { useColors, useIsDark, findLang, type ThemeColors } from '../../src/constants'
 import { translateService } from '../../src/services/api'
 import {
   ArrowRightIcon, CopyIcon, TrashIcon, ClockIcon, TypeIcon, MicIcon, CameraIcon, type IconComponent,
@@ -59,8 +59,10 @@ function HistoryCard({ item, onDelete, onCopy }: {
 }) {
   const C = useColors()
   const meta = typeMeta(C)[item.type] ?? typeMeta(C).text
-  const source = getLang(item.source_lang)
-  const target = getLang(item.target_lang)
+  // Camera scans store the detected language by name ("French"), others by code
+  const source = findLang(item.source_lang)
+  const target = findLang(item.target_lang)
+  const code = (raw: string, lang?: { code: string }) => (lang?.code ?? raw).toUpperCase()
 
   return (
     <StyledCard backgroundColor={C.bgCard} borderRadius={14} padding={14} marginBottom={10}
@@ -68,11 +70,11 @@ function HistoryCard({ item, onDelete, onCopy }: {
     >
       <Stack horizontal alignItems="center" justifyContent="space-between" marginBottom={8}>
         <Stack horizontal alignItems="center" gap={6}>
-          <Text style={{ fontSize: 15 }}>{source.flag}</Text>
-          <Text variant="caption" color={C.textPrimary} fontWeight="700">{item.source_lang.toUpperCase()}</Text>
+          <Text style={{ fontSize: 15 }}>{source?.flag ?? '🌐'}</Text>
+          <Text variant="caption" color={C.textPrimary} fontWeight="700">{code(item.source_lang, source)}</Text>
           <ArrowRightIcon size={12} strokeWidth={2} color={C.textMuted} />
-          <Text style={{ fontSize: 15 }}>{target.flag}</Text>
-          <Text variant="caption" color={C.textPrimary} fontWeight="700">{item.target_lang.toUpperCase()}</Text>
+          <Text style={{ fontSize: 15 }}>{target?.flag ?? '🌐'}</Text>
+          <Text variant="caption" color={C.textPrimary} fontWeight="700">{code(item.target_lang, target)}</Text>
         </Stack>
         <Stack horizontal alignItems="center" gap={4} borderRadius={8} paddingHorizontal={8} paddingVertical={3}
           backgroundColor={meta.bg}
@@ -167,7 +169,7 @@ export default function HistoryScreen() {
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+    <StyledPage flex={1} edges={['top', 'left', 'right']} backgroundColor={C.bg} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >

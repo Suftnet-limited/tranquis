@@ -8,7 +8,7 @@ import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toast
 import { Text } from '../../src/components/Text'
 import { ActionChip } from '../../src/components/ActionChip'
 import { SectionLabel } from '../../src/components/SectionLabel'
-import { useColors, useIsDark, getLang, findLang } from '../../src/constants'
+import { useColors, useIsDark, getLang, findLang, getLangColors } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { useTranslate, useTTS } from '../../src/hooks'
 import type { TranslationResult } from '../../src/services/api'
@@ -257,7 +257,7 @@ export default function CameraScreen() {
   const pair = `${detected ? detected.code.toUpperCase() : 'AUTO'} → ${(result?.target_lang ?? targetLang).toUpperCase()}`
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
+    <StyledPage flex={1} edges={['top', 'left', 'right']} backgroundColor={C.bgCard} showStatusBar
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
     >
@@ -411,16 +411,20 @@ export default function CameraScreen() {
             <StyledCard backgroundColor={C.bgCard} borderRadius={16} paddingHorizontal={14}
               borderWidth={1} borderColor={C.border}
             >
-              {TIPS.map(({ Icon, tip }, i) => (
+              {TIPS.map(({ Icon, tip }, i) => {
+                // Each tip gets its own accent (amber sun, purple crop, blue type…)
+                const tint = getLangColors(C, i + 1)
+                return (
                 <Stack key={tip} horizontal alignItems="center" gap={12} paddingVertical={12}
                   borderTopWidth={i ? 1 : 0} borderTopColor={C.border}
                 >
-                  <Stack width={30} height={30} borderRadius={15} alignItems="center" justifyContent="center" backgroundColor={C.primaryBg}>
-                    <Icon size={14} strokeWidth={2} color={C.primary} />
+                  <Stack width={30} height={30} borderRadius={15} alignItems="center" justifyContent="center" backgroundColor={tint.bg}>
+                    <Icon size={14} strokeWidth={2} color={tint.color} />
                   </Stack>
                   <Text variant="bodySmall" color={C.textSecondary}>{tip}</Text>
                 </Stack>
-              ))}
+                )
+              })}
             </StyledCard>
           </Stack>
         )}

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { TranslateIcon, MicIcon, CameraIcon, BookIcon, ClockIcon, type IconComponent } from '../../src/icons'
+import { GlobeIcon, MicIcon, CameraIcon, BookIcon, ClockIcon, type IconComponent } from '../../src/icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '../../src/constants'
 import { useAuthStore, usePremiumStore } from '../../src/stores'
@@ -46,7 +46,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title:      'Translate',
-          tabBarIcon: tabIcon(TranslateIcon),
+          tabBarIcon: tabIcon(GlobeIcon),
         }}
       />
       <Tabs.Screen

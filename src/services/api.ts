@@ -212,7 +212,6 @@ export const translateService = {
     source_lang: string
     target_lang: string
     tone:        string
-    explain?:    boolean
     type?:       'text' | 'voice'
   }) => api.post<TranslationResult>('/api/v1/translate/text', params),
 

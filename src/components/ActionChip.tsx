@@ -12,10 +12,11 @@ interface ActionChipProps {
   loading?:  boolean
   danger?:   boolean
   disabled?: boolean
+  background?: string
 }
 
 // Small icon + label pill for result actions (Listen, Copy, Save, Delete…)
-export function ActionChip({ icon: Icon, label, onPress, loading, danger, disabled }: ActionChipProps) {
+export function ActionChip({ icon: Icon, label, onPress, loading, danger, disabled, background }: ActionChipProps) {
   const C = useColors()
   const tint = danger ? C.danger : C.primary
   return (
@@ -25,9 +26,9 @@ export function ActionChip({ icon: Icon, label, onPress, loading, danger, disabl
       style={{ opacity: disabled || loading ? 0.6 : 1 }}
     >
       <Stack
-        horizontal alignItems="center" gap={6}
-        backgroundColor={danger ? C.dangerBg : C.bgInput} borderRadius={12}
-        paddingHorizontal={12} paddingVertical={8}
+        horizontal alignItems="center" gap={5}
+        backgroundColor={danger ? C.dangerBg : background ?? C.bgInput} borderRadius={20}
+        paddingHorizontal={11} paddingVertical={8}
         borderWidth={1} borderColor={danger ? 'transparent' : C.border}
       >
         {loading

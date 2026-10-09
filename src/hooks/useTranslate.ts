@@ -9,7 +9,7 @@ export function useTranslate() {
   const [result, setResult]               = useState<TranslationResult | null>(null)
   const [error, setError]                 = useState<string | null>(null)
 
-  const translate = useCallback(async (text: string, explain = false) => {
+  const translate = useCallback(async (text: string) => {
     if (!text.trim()) return
     setLoading(true)
     setError(null)
@@ -19,7 +19,6 @@ export function useTranslate() {
         source_lang: sourceLang,
         target_lang: targetLang,
         tone,
-        explain,
       })
       setResult(data)
       return data

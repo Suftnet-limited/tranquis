@@ -134,7 +134,8 @@ export default function VoiceScreen() {
         translation: translated,
       }])
     } catch (e: any) {
-      toastService.error('Error', e?.message || 'Could not transcribe audio')
+      if (e?.message === 'No speech detected') toastService.info('No speech detected', 'Try speaking a little louder')
+      else toastService.error('Error', e?.message || 'Could not transcribe audio')
     } finally {
       setProcessing(false)
     }

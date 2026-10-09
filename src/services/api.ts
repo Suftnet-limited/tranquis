@@ -6,6 +6,25 @@ export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://careermind-b
 
 const NO_REFRESH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh']
 
+// No request may hang forever — a stalled network call would leave a spinner
+// running. Aborted requests surface as a readable error.
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 30000,
+): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (err: any) {
+    if (err?.name === 'AbortError') throw new Error('The request timed out. Check your connection and try again.')
+    throw err
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 class ApiClient {
   private base: string
   private refreshPromise: Promise<boolean> | null = null
@@ -43,7 +62,7 @@ class ApiClient {
     const { refreshToken, setTokens, logout } = useAuthStore.getState()
     if (!refreshToken) { logout(); return false }
     try {
-      const res = await fetch(`${this.base}/api/v1/auth/refresh`, {
+      const res = await fetchWithTimeout(`${this.base}/api/v1/auth/refresh`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ refresh_token: refreshToken }),
@@ -59,11 +78,11 @@ class ApiClient {
   }
 
   async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.base}${path}`, { headers: this.getHeaders() })
+    const res = await fetchWithTimeout(`${this.base}${path}`, { headers: this.getHeaders() })
     if (this.needsRefresh(res, path)) {
       const refreshed = await this.refreshTokens()
       if (!refreshed) throw new Error('Session expired. Please sign in again.')
-      const retry = await fetch(`${this.base}${path}`, { headers: this.getHeaders() })
+      const retry = await fetchWithTimeout(`${this.base}${path}`, { headers: this.getHeaders() })
       if (!retry.ok) throw new Error(`GET ${path} → ${retry.status}`)
       return retry.json()
     }
@@ -72,7 +91,7 @@ class ApiClient {
   }
 
   async post<T>(path: string, body?: object): Promise<T> {
-    const res = await fetch(`${this.base}${path}`, {
+    const res = await fetchWithTimeout(`${this.base}${path}`, {
       method:  'POST',
       headers: this.getHeaders(),
       body:    body ? JSON.stringify(body) : undefined,
@@ -80,7 +99,7 @@ class ApiClient {
     if (this.needsRefresh(res, path)) {
       const refreshed = await this.refreshTokens()
       if (!refreshed) throw new Error('Session expired. Please sign in again.')
-      const retry = await fetch(`${this.base}${path}`, {
+      const retry = await fetchWithTimeout(`${this.base}${path}`, {
         method:  'POST',
         headers: this.getHeaders(),
         body:    body ? JSON.stringify(body) : undefined,
@@ -100,7 +119,7 @@ class ApiClient {
 
   async postForm<T>(path: string, form: FormData): Promise<T> {
     const token = useAuthStore.getState().accessToken
-    const res = await fetch(`${this.base}${path}`, {
+    const res = await fetchWithTimeout(`${this.base}${path}`, {
       method:  'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body:    form,
@@ -109,7 +128,7 @@ class ApiClient {
       const refreshed = await this.refreshTokens()
       if (!refreshed) throw new Error('Session expired. Please sign in again.')
       const newToken = useAuthStore.getState().accessToken
-      const retry = await fetch(`${this.base}${path}`, {
+      const retry = await fetchWithTimeout(`${this.base}${path}`, {
         method:  'POST',
         headers: newToken ? { Authorization: `Bearer ${newToken}` } : {},
         body:    form,
@@ -128,14 +147,14 @@ class ApiClient {
   }
 
   async delete(path: string): Promise<void> {
-    const res = await fetch(`${this.base}${path}`, {
+    const res = await fetchWithTimeout(`${this.base}${path}`, {
       method:  'DELETE',
       headers: this.getHeaders(),
     })
     if (this.needsRefresh(res, path)) {
       const refreshed = await this.refreshTokens()
       if (!refreshed) throw new Error('Session expired. Please sign in again.')
-      const retry = await fetch(`${this.base}${path}`, {
+      const retry = await fetchWithTimeout(`${this.base}${path}`, {
         method:  'DELETE',
         headers: this.getHeaders(),
       })

@@ -13,7 +13,7 @@
       "backgroundColor": "#F5F5F7"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.suftnet.tranquis",
       "buildNumber": "1",
       "infoPlist": {

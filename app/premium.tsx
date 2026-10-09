@@ -20,7 +20,7 @@ const FEATURES = [
   'Tone-aware translations — casual, formal, business, travel',
   'Explain any translation — word choices & grammar',
   'Pronunciation guides for every saved phrase',
-  'Natural speech playback in 60+ languages',
+  'Natural speech playback in 20+ languages',
   'Unlimited phrasebook saves',
 ]
 

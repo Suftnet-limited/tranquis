@@ -251,7 +251,8 @@ export default function CameraScreen() {
     toastService.success('Copied', 'Translation copied')
   }
 
-  const captureLabel = imageUri ? (base64 && !result && !loading ? 'Translate' : 'Retake') : 'Capture & Translate'
+  // Translating is what the screen does, so the button only names the action
+  const captureLabel = imageUri ? (base64 && !result && !loading ? 'Try again' : 'Retake') : 'Capture'
   const detected = result ? findLang(result.source_lang) : undefined
   // Once there's a scan, show the pair it was actually translated with
   const pair = `${detected ? detected.code.toUpperCase() : 'AUTO'} → ${(result?.target_lang ?? targetLang).toUpperCase()}`
@@ -272,7 +273,7 @@ export default function CameraScreen() {
             <ChevronLeftIcon size={20} strokeWidth={2.4} color={C.textPrimary} />
           </StyledPressable>
           <Stack flex={1}>
-            <Text variant="title" color={C.textPrimary} fontWeight="800">Camera Translate</Text>
+            <Text variant="title" color={C.textPrimary} fontWeight="800">Camera</Text>
             <Text variant="bodySmall" color={C.textMuted}>Point at any text</Text>
           </Stack>
           <Stack backgroundColor={C.primaryBg} borderRadius={16} paddingHorizontal={12} paddingVertical={6}>
@@ -355,7 +356,7 @@ export default function CameraScreen() {
           {loading && <ScanWave />}
         </Stack>
 
-        {/* Gallery | Capture & Translate | Live */}
+        {/* Gallery | Capture | Live */}
         <Stack horizontal gap={10} marginBottom={20}>
           <StyledPressable flex={1} onPress={handlePickGallery} disabled={loading}
             accessibilityRole="button" accessibilityLabel="Pick from gallery"

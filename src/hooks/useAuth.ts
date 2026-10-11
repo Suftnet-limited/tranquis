@@ -39,11 +39,28 @@ export function useAuth() {
     }
   }, [setTokens, setUser])
 
+  // Returns true on success; the caller decides whether to navigate
+  const resetPassword = useCallback(async (email: string, newPassword: string) => {
+    setLoading(true)
+    try {
+      const data = await authService.resetPassword(email, newPassword)
+      setTokens(data.access_token, data.refresh_token)
+      const me = await authService.me()
+      setUser(me as any)
+      return true
+    } catch (err: any) {
+      toastService.error('Reset failed', err?.message || 'Could not reset your password')
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [setTokens, setUser])
+
   const logout = useCallback(async () => {
     // No server-side logout endpoint — just clear local tokens
     storeLogout()
     router.replace('/auth/login')
   }, [storeLogout])
 
-  return { login, register, logout, loading }
+  return { login, register, resetPassword, logout, loading }
 }

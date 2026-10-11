@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores'
 // api.careermind.app has no DNS yet — fall back to the Render service
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://careermind-backend-ky7e.onrender.com'
 
-const NO_REFRESH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh']
+const NO_REFRESH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh', '/api/v1/auth/reset-password-instant']
 
 // No request may hang forever — a stalled network call would leave a spinner
 // running. Aborted requests surface as a readable error.
@@ -186,10 +186,17 @@ export const authService = {
       '/api/v1/auth/login', { email, password }
     ),
 
-  // Backend expects { name, email, password } — returns tokens directly
+  // Backend expects { name, email, password } — returns tokens directly.
+  // app_source marks the account as Tranquis, which allows the instant reset below.
   register: (email: string, password: string, name: string) =>
     api.post<{ access_token: string; refresh_token: string; token_type: string }>(
-      '/api/v1/auth/register', { email, password, name }
+      '/api/v1/auth/register', { email, password, name, app_source: 'tranquis' }
+    ),
+
+  // Sets a new password from the email alone and returns tokens (Tranquis accounts only)
+  resetPassword: (email: string, newPassword: string) =>
+    api.post<{ access_token: string; refresh_token: string; token_type: string }>(
+      '/api/v1/auth/reset-password-instant', { email, new_password: newPassword }
     ),
 
   me: async (): Promise<MeResponse> => {

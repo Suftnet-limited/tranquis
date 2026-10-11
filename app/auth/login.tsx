@@ -7,6 +7,7 @@ import { AuthBackground, BrandMark, GradientButton, OrDivider, EyeToggle, EMAIL_
 import { useColors, useIsDark, getFieldColors } from '../../src/constants'
 import { useAuth } from '../../src/hooks'
 import { MailIcon, LockIcon } from '../../src/icons'
+import { ResetPasswordSheet } from '../../src/components/ResetPasswordSheet'
 
 export default function LoginScreen() {
   const C      = useColors()
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('')
   const [showPw,   setShowPw]   = useState(false)
   const [tried,    setTried]    = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
 
   const FC = getFieldColors(C)
   const emailError = tried && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined
@@ -81,7 +83,7 @@ export default function LoginScreen() {
           </StyledCard>
 
           <Stack alignItems="flex-end" marginBottom={4}>
-            <StyledPressable onPress={() => router.push('/auth/forgot-password' as any)} hitSlop={8}
+            <StyledPressable onPress={() => setResetOpen(true)} hitSlop={8}
               accessibilityRole="button" accessibilityLabel="Forgot password"
             >
               <Text variant="bodySmall" color={C.primary} fontWeight="700">Forgot password?</Text>
@@ -104,6 +106,13 @@ export default function LoginScreen() {
           </Stack>
         </StyledScrollView>
       </KeyboardAvoidingView>
+
+      <ResetPasswordSheet
+        visible={resetOpen}
+        email={EMAIL_RE.test(email.trim()) ? email.trim() : ''}
+        onClose={() => setResetOpen(false)}
+        onDone={() => { setResetOpen(false); router.replace('/(tabs)') }}
+      />
     </StyledPage>
   )
 }

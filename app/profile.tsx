@@ -11,6 +11,7 @@ import { useAuthStore, useThemeStore, useTranslatorStore, type TtsVoice } from '
 import { usePremium, playTTS } from '../src/hooks'
 import { authService } from '../src/services/api'
 import { goBack } from '../src/utils'
+import { ResetPasswordSheet } from '../src/components/ResetPasswordSheet'
 import {
   MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon, SparkleIcon,
   ChevronRightIcon, ChevronLeftIcon, SunIcon, MoonIcon, DeviceIcon, SpeakerIcon, CheckIcon, type IconComponent,
@@ -137,6 +138,7 @@ export default function ProfileScreen() {
   const { mode, setMode } = useThemeStore()
   const { voice, setVoice } = useTranslatorStore()
   const [testing, setTesting] = useState<TtsVoice | null>(null)
+  const [passwordOpen, setPasswordOpen] = useState(false)
   const { isPremium } = usePremium()
 
   const theme = isDark ? 'dark' : 'light'
@@ -245,7 +247,7 @@ export default function ProfileScreen() {
 
         <Group title="ACCOUNT">
           <SettingRow first Icon={MailIcon} tint={T.blue} label="Email" value={user?.email ?? ''} />
-          <SettingRow Icon={LockIcon} tint={T.amber} label="Change password" onPress={() => router.push('/auth/forgot-password' as any)} />
+          <SettingRow Icon={LockIcon} tint={T.amber} label="Change password" onPress={() => setPasswordOpen(true)} />
         </Group>
 
         <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 1, marginBottom: 8, marginLeft: 4 }}>APPEARANCE</Text>
@@ -299,6 +301,14 @@ export default function ProfileScreen() {
           <Text variant="caption" color={C.textMuted}>Translate anything, anywhere</Text>
         </Stack>
       </StyledScrollView>
+
+      <ResetPasswordSheet
+        visible={passwordOpen}
+        email={user?.email ?? ''}
+        lockEmail
+        onClose={() => setPasswordOpen(false)}
+        onDone={() => { setPasswordOpen(false); toastService.success('Password changed', 'Use it next time you sign in') }}
+      />
     </StyledPage>
   )
 }

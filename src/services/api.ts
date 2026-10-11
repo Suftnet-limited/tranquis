@@ -248,8 +248,8 @@ export const translateService = {
       format:       'm4a',
     }),
 
-  textToSpeech: (text: string, lang: string) =>
-    api.post<{ audio_base64: string; format?: string }>('/api/v1/translate/tts', { text, lang }),
+  textToSpeech: (text: string, lang: string, voice?: string) =>
+    api.post<{ audio_base64: string; format?: string }>('/api/v1/translate/tts', { text, lang, voice }),
 
   // The backend pages by page/limit and returns { translations, total, page, pages };
   // normalise to { items, total } for the screens

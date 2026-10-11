@@ -1,5 +1,5 @@
-import React from 'react'
-import { Platform } from 'react-native'
+import React, { useState } from 'react'
+import { ActivityIndicator, Platform } from 'react-native'
 import { router } from 'expo-router'
 import {
   StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable,
@@ -7,13 +7,13 @@ import {
 } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { useColors, useIsDark, type ThemeMode, type ThemeColors } from '../src/constants'
-import { useAuthStore, useThemeStore } from '../src/stores'
-import { usePremium } from '../src/hooks'
+import { useAuthStore, useThemeStore, useTranslatorStore, type TtsVoice } from '../src/stores'
+import { usePremium, playTTS } from '../src/hooks'
 import { authService } from '../src/services/api'
 import { goBack } from '../src/utils'
 import {
   MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon, SparkleIcon,
-  ChevronRightIcon, ChevronLeftIcon, SunIcon, MoonIcon, DeviceIcon, type IconComponent,
+  ChevronRightIcon, ChevronLeftIcon, SunIcon, MoonIcon, DeviceIcon, SpeakerIcon, CheckIcon, type IconComponent,
 } from '../src/icons'
 
 // Each row icon gets its own accent so the list doesn't read as one colour
@@ -32,6 +32,55 @@ const APPEARANCE: { mode: ThemeMode; label: string; Icon: IconComponent; tint: k
   { mode: 'dark',   label: 'Dark',   Icon: MoonIcon,   tint: 'purple' },
   { mode: 'system', label: 'System', Icon: DeviceIcon, tint: 'blue'   },
 ]
+
+const VOICES: { id: TtsVoice; label: string; description: string }[] = [
+  { id: 'nova',    label: 'Nova',    description: 'Warm & natural' },
+  { id: 'alloy',   label: 'Alloy',   description: 'Balanced & neutral' },
+  { id: 'echo',    label: 'Echo',    description: 'Calm & clear' },
+  { id: 'fable',   label: 'Fable',   description: 'Expressive storyteller' },
+  { id: 'onyx',    label: 'Onyx',    description: 'Deep & authoritative' },
+  { id: 'shimmer', label: 'Shimmer', description: 'Bright & gentle' },
+]
+const VOICE_SAMPLE = 'Hello, I am your translation assistant'
+
+function VoiceRow({ id, label, description, selected, testing, first, onSelect, onTest }: {
+  id: TtsVoice; label: string; description: string; selected: boolean; testing: boolean
+  first?: boolean; onSelect: () => void; onTest: () => void
+}) {
+  const C = useColors()
+  return (
+    <Stack horizontal alignItems="center" gap={12} paddingVertical={12}
+      borderTopWidth={first ? 0 : 1} borderTopColor={C.border}
+    >
+      <StyledPressable flex={1} onPress={onSelect}
+        accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${label} voice, ${description}`}
+      >
+        <Stack horizontal alignItems="center" gap={12}>
+          <Stack width={22} height={22} borderRadius={11} alignItems="center" justifyContent="center"
+            borderWidth={2} borderColor={selected ? C.primary : C.border}
+            backgroundColor={selected ? C.primary : 'transparent'}
+          >
+            {selected && <CheckIcon size={12} strokeWidth={3} color={C.white} />}
+          </Stack>
+          <Stack flex={1}>
+            <Text variant="label" color={selected ? C.primary : C.textPrimary} fontWeight={selected ? '800' : '600'}>{label}</Text>
+            <Text variant="caption" color={C.textMuted}>{description}</Text>
+          </Stack>
+        </Stack>
+      </StyledPressable>
+      <StyledPressable onPress={onTest} disabled={testing}
+        flexDirection="row" alignItems="center" gap={6} paddingHorizontal={12} height={34} borderRadius={17}
+        backgroundColor={selected ? C.primaryBg : C.bgInput}
+        accessibilityRole="button" accessibilityLabel={`Test the ${label} voice`}
+      >
+        {testing
+          ? <ActivityIndicator size="small" color={C.primary} />
+          : <SpeakerIcon size={14} strokeWidth={2.2} color={C.primary} />}
+        <Text variant="caption" color={C.primary} fontWeight="700">Test</Text>
+      </StyledPressable>
+    </Stack>
+  )
+}
 
 function SettingRow({ Icon, tint, label, value, onPress, danger, first }: {
   Icon: IconComponent; tint: Tint; label: string; value?: string
@@ -74,9 +123,27 @@ export default function ProfileScreen() {
   const T      = tints(C)
   const { user, logout } = useAuthStore()
   const { mode, setMode } = useThemeStore()
+  const { voice, setVoice } = useTranslatorStore()
+  const [testing, setTesting] = useState<TtsVoice | null>(null)
   const { isPremium } = usePremium()
 
   const theme = isDark ? 'dark' : 'light'
+
+  const selectVoice = (v: TtsVoice, label: string) => {
+    if (v === voice) return
+    setVoice(v)
+    toastService.success('Voice saved', `${label} will read your translations`)
+  }
+
+  const testVoice = async (v: TtsVoice) => {
+    if (testing) return
+    setTesting(v)
+    try {
+      await playTTS(VOICE_SAMPLE, 'en', v)
+    } finally {
+      setTesting(null)
+    }
+  }
 
   const handleLogout = async () => {
     const ok = await dialogueService.confirm({
@@ -189,6 +256,15 @@ export default function ProfileScreen() {
             )
           })}
         </Stack>
+
+        <Group title="VOICE">
+          {VOICES.map((v, i) => (
+            <VoiceRow key={v.id} {...v} first={i === 0}
+              selected={voice === v.id} testing={testing === v.id}
+              onSelect={() => selectVoice(v.id, v.label)} onTest={() => testVoice(v.id)}
+            />
+          ))}
+        </Group>
 
         <Group title="SUPPORT">
           <SettingRow first Icon={HelpCircleIcon} tint={T.purple} label="Help & Support" onPress={() => router.push('/help' as any)} />

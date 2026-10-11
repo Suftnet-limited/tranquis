@@ -3,22 +3,23 @@ import { Audio } from 'expo-av'
 import * as FileSystem from 'expo-file-system'
 import { toastService } from 'fluent-styles'
 import { translateService } from '../services/api'
+import { useTranslatorStore, type TtsVoice } from '../stores'
 
 // One sound at a time across every screen, so two clips never overlap or fight
 // over the iOS audio session
 const player: { sound: Audio.Sound | null } = { sound: null }
 
-// Clips already generated this session, keyed by language + text. Replaying a
+// Clips already generated this session, keyed by voice + language + text. Replaying a
 // phrase skips the network round trip, which is most of the wait.
 const clipCache = new Map<string, string>()
 const CACHE_MAX = 30
 
-async function getClip(text: string, lang: string): Promise<string> {
-  const key = `${lang}:${text}`
+async function getClip(text: string, lang: string, voice: TtsVoice): Promise<string> {
+  const key = `${voice}:${lang}:${text}`
   const cached = clipCache.get(key)
   if (cached && (await FileSystem.getInfoAsync(cached)).exists) return cached
 
-  const { audio_base64, format = 'mp3' } = await translateService.textToSpeech(text, lang)
+  const { audio_base64, format = 'mp3' } = await translateService.textToSpeech(text, lang, voice)
   // AVPlayer can't play data: URIs reliably, so write the clip to the cache first
   const uri = `${FileSystem.cacheDirectory}tts-${Date.now()}.${format}`
   await FileSystem.writeAsStringAsync(uri, audio_base64, { encoding: FileSystem.EncodingType.Base64 })
@@ -32,10 +33,11 @@ async function getClip(text: string, lang: string): Promise<string> {
   return uri
 }
 
-export async function playTTS(text: string, lang: string) {
+/** Plays in the voice chosen in Profile unless `voice` overrides it (the voice preview). */
+export async function playTTS(text: string, lang: string, voice?: TtsVoice) {
   if (!text.trim()) return
   try {
-    const uri = await getClip(text, lang)
+    const uri = await getClip(text, lang, voice ?? useTranslatorStore.getState().voice)
 
     // Leave recording mode, otherwise iOS routes playback to the earpiece
     await Audio.setAudioModeAsync({

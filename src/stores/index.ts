@@ -96,58 +96,76 @@ export const useAuthStore = create<AuthState>((set) => ({
 // ─── Translator preferences store ────────────────────────────────────────────
 const LANG_PREF_KEY = 'tranquis_lang_prefs'
 
+export const TTS_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'] as const
+export type TtsVoice = typeof TTS_VOICES[number]
+const DEFAULT_VOICE: TtsVoice = 'nova'
+
 interface TranslatorState {
   sourceLang:  string
   targetLang:  string
   tone:        TranslationTone
+  voice:       TtsVoice
   hydrated:    boolean
   setSource:   (code: string) => void
   setTarget:   (code: string) => void
   setTone:     (tone: TranslationTone) => void
+  setVoice:    (voice: TtsVoice) => void
   swapLangs:   () => void
   hydrate:     () => Promise<void>
 }
 
-const persistLangPrefs = (source: string, target: string, tone: TranslationTone) => {
-  SecureStore.setItemAsync(LANG_PREF_KEY, JSON.stringify({ source, target, tone })).catch(() => {})
+const persistLangPrefs = (source: string, target: string, tone: TranslationTone, voice: TtsVoice) => {
+  SecureStore.setItemAsync(LANG_PREF_KEY, JSON.stringify({ source, target, tone, voice })).catch(() => {})
 }
 
 export const useTranslatorStore = create<TranslatorState>((set, get) => ({
   sourceLang: DEFAULT_SOURCE,
   targetLang: DEFAULT_TARGET,
   tone:       'casual',
+  voice:      DEFAULT_VOICE,
   hydrated:   false,
 
   setSource: (code) => {
     set({ sourceLang: code })
-    const { targetLang, tone } = get()
-    persistLangPrefs(code, targetLang, tone)
+    const { targetLang, tone, voice } = get()
+    persistLangPrefs(code, targetLang, tone, voice)
   },
 
   setTarget: (code) => {
     set({ targetLang: code })
-    const { sourceLang, tone } = get()
-    persistLangPrefs(sourceLang, code, tone)
+    const { sourceLang, tone, voice } = get()
+    persistLangPrefs(sourceLang, code, tone, voice)
   },
 
   setTone: (tone) => {
     set({ tone })
-    const { sourceLang, targetLang } = get()
-    persistLangPrefs(sourceLang, targetLang, tone)
+    const { sourceLang, targetLang, voice } = get()
+    persistLangPrefs(sourceLang, targetLang, tone, voice)
+  },
+
+  setVoice: (voice) => {
+    set({ voice })
+    const { sourceLang, targetLang, tone } = get()
+    persistLangPrefs(sourceLang, targetLang, tone, voice)
   },
 
   swapLangs: () => {
-    const { sourceLang, targetLang, tone } = get()
+    const { sourceLang, targetLang, tone, voice } = get()
     set({ sourceLang: targetLang, targetLang: sourceLang })
-    persistLangPrefs(targetLang, sourceLang, tone)
+    persistLangPrefs(targetLang, sourceLang, tone, voice)
   },
 
   hydrate: async () => {
     try {
       const raw = await SecureStore.getItemAsync(LANG_PREF_KEY)
       if (raw) {
-        const { source, target, tone } = JSON.parse(raw)
-        set({ sourceLang: source, targetLang: target, tone, hydrated: true })
+        const { source, target, tone, voice } = JSON.parse(raw)
+        // Prefs saved before voices existed have no voice
+        set({
+          sourceLang: source, targetLang: target, tone,
+          voice: TTS_VOICES.includes(voice) ? voice : DEFAULT_VOICE,
+          hydrated: true,
+        })
       } else {
         set({ hydrated: true })
       }

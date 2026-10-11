@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, Platform } from 'react-native'
+import { ActivityIndicator, Platform, ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import {
   StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable,
@@ -43,42 +43,51 @@ const VOICES: { id: TtsVoice; label: string; description: string }[] = [
 ]
 const VOICE_SAMPLE = 'Hello, I am your translation assistant'
 
-function VoiceRow({ id, label, description, selected, testing, first, onSelect, onTest }: {
-  id: TtsVoice; label: string; description: string; selected: boolean; testing: boolean
-  first?: boolean; onSelect: () => void; onTest: () => void
+const VOICE_CARD_WIDTH = 148
+const VOICE_CARD_GAP   = 10
+
+function VoiceCard({ label, description, selected, testing, onSelect, onTest }: {
+  label: string; description: string; selected: boolean; testing: boolean
+  onSelect: () => void; onTest: () => void
 }) {
   const C = useColors()
   return (
-    <Stack horizontal alignItems="center" gap={12} paddingVertical={12}
-      borderTopWidth={first ? 0 : 1} borderTopColor={C.border}
+    <StyledPressable onPress={onSelect} width={VOICE_CARD_WIDTH}
+      accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${label} voice, ${description}`}
     >
-      <StyledPressable flex={1} onPress={onSelect}
-        accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${label} voice, ${description}`}
+      <Stack flex={1} gap={10} padding={14} borderRadius={18}
+        backgroundColor={selected ? C.primaryBg : C.bgCard}
+        borderWidth={selected ? 2 : 1} borderColor={selected ? C.primary : C.border}
       >
-        <Stack horizontal alignItems="center" gap={12}>
+        <Stack horizontal alignItems="center" justifyContent="space-between">
+          <Stack width={36} height={36} borderRadius={12} alignItems="center" justifyContent="center"
+            backgroundColor={selected ? C.primary : C.bgInput}
+          >
+            <SpeakerIcon size={17} strokeWidth={2} color={selected ? C.white : C.textMuted} />
+          </Stack>
           <Stack width={22} height={22} borderRadius={11} alignItems="center" justifyContent="center"
             borderWidth={2} borderColor={selected ? C.primary : C.border}
             backgroundColor={selected ? C.primary : 'transparent'}
           >
             {selected && <CheckIcon size={12} strokeWidth={3} color={C.white} />}
           </Stack>
-          <Stack flex={1}>
-            <Text variant="label" color={selected ? C.primary : C.textPrimary} fontWeight={selected ? '800' : '600'}>{label}</Text>
-            <Text variant="caption" color={C.textMuted}>{description}</Text>
-          </Stack>
         </Stack>
-      </StyledPressable>
-      <StyledPressable onPress={onTest} disabled={testing}
-        flexDirection="row" alignItems="center" gap={6} paddingHorizontal={12} height={34} borderRadius={17}
-        backgroundColor={selected ? C.primaryBg : C.bgInput}
-        accessibilityRole="button" accessibilityLabel={`Test the ${label} voice`}
-      >
-        {testing
-          ? <ActivityIndicator size="small" color={C.primary} />
-          : <SpeakerIcon size={14} strokeWidth={2.2} color={C.primary} />}
-        <Text variant="caption" color={C.primary} fontWeight="700">Test</Text>
-      </StyledPressable>
-    </Stack>
+        <Stack flex={1}>
+          <Text variant="label" color={selected ? C.primary : C.textPrimary} fontWeight="800">{label}</Text>
+          <Text variant="caption" color={C.textMuted} numberOfLines={2}>{description}</Text>
+        </Stack>
+        <StyledPressable onPress={onTest} disabled={testing}
+          flexDirection="row" alignItems="center" justifyContent="center" gap={6} height={32} borderRadius={16}
+          backgroundColor={selected ? C.bgCard : C.bgInput}
+          accessibilityRole="button" accessibilityLabel={`Test the ${label} voice`}
+        >
+          {testing
+            ? <ActivityIndicator size="small" color={C.primary} />
+            : <Text variant="caption" color={C.primary} fontWeight="800">{'\u25B6\uFE0E'}</Text>}
+          <Text variant="caption" color={C.primary} fontWeight="700">Test</Text>
+        </StyledPressable>
+      </Stack>
+    </StyledPressable>
   )
 }
 
@@ -257,14 +266,20 @@ export default function ProfileScreen() {
           })}
         </Stack>
 
-        <Group title="VOICE">
-          {VOICES.map((v, i) => (
-            <VoiceRow key={v.id} {...v} first={i === 0}
+        <Text variant="overline" color={C.textMuted} style={{ letterSpacing: 1, marginBottom: 8, marginLeft: 4 }}>VOICE</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -16, marginBottom: 22 }}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: VOICE_CARD_GAP }}
+          snapToInterval={VOICE_CARD_WIDTH + VOICE_CARD_GAP} decelerationRate="fast"
+          contentOffset={{ x: Math.max(0, VOICES.findIndex((v) => v.id === voice) - 1) * (VOICE_CARD_WIDTH + VOICE_CARD_GAP), y: 0 }}
+        >
+          {VOICES.map((v) => (
+            <VoiceCard key={v.id} label={v.label} description={v.description}
               selected={voice === v.id} testing={testing === v.id}
               onSelect={() => selectVoice(v.id, v.label)} onTest={() => testVoice(v.id)}
             />
           ))}
-        </Group>
+        </ScrollView>
 
         <Group title="SUPPORT">
           <SettingRow first Icon={HelpCircleIcon} tint={T.purple} label="Help & Support" onPress={() => router.push('/help' as any)} />

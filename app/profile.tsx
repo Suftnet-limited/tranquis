@@ -18,13 +18,15 @@ import {
 
 // Each row icon gets its own accent so the list doesn't read as one colour
 type Tint = { color: string; bg: string }
-const tints = (C: ThemeColors) => ({
+const tints = (C: ThemeColors, isDark = false) => ({
   blue:   { color: C.sumColor,   bg: C.sumBg },
   amber:  { color: C.flashColor, bg: C.flashBg },
   purple: { color: C.quizColor,  bg: C.quizBg },
   teal:   { color: C.primary,    bg: C.primaryBg },
   orange: { color: C.mod4,       bg: C.mod4Bg },
   red:    { color: C.danger,     bg: C.dangerBg },
+  // Not in the theme; only the voice cards need a sixth hue
+  pink:   { color: isDark ? '#F472B6' : '#DB2777', bg: isDark ? 'rgba(236,72,153,0.16)' : '#FDF2F8' },
 })
 
 const APPEARANCE: { mode: ThemeMode; label: string; Icon: IconComponent; tint: keyof ReturnType<typeof tints> }[] = [
@@ -33,21 +35,22 @@ const APPEARANCE: { mode: ThemeMode; label: string; Icon: IconComponent; tint: k
   { mode: 'system', label: 'System', Icon: DeviceIcon, tint: 'blue'   },
 ]
 
-const VOICES: { id: TtsVoice; label: string; description: string }[] = [
-  { id: 'nova',    label: 'Nova',    description: 'Warm & natural' },
-  { id: 'alloy',   label: 'Alloy',   description: 'Balanced & neutral' },
-  { id: 'echo',    label: 'Echo',    description: 'Calm & clear' },
-  { id: 'fable',   label: 'Fable',   description: 'Expressive storyteller' },
-  { id: 'onyx',    label: 'Onyx',    description: 'Deep & authoritative' },
-  { id: 'shimmer', label: 'Shimmer', description: 'Bright & gentle' },
+// Every voice has its own colour, the same each time
+const VOICES: { id: TtsVoice; label: string; description: string; tint: keyof ReturnType<typeof tints> }[] = [
+  { id: 'nova',    label: 'Nova',    description: 'Warm & natural',         tint: 'teal'   },
+  { id: 'alloy',   label: 'Alloy',   description: 'Balanced & neutral',     tint: 'blue'   },
+  { id: 'echo',    label: 'Echo',    description: 'Calm & clear',           tint: 'purple' },
+  { id: 'fable',   label: 'Fable',   description: 'Expressive storyteller', tint: 'amber'  },
+  { id: 'onyx',    label: 'Onyx',    description: 'Deep & authoritative',   tint: 'orange' },
+  { id: 'shimmer', label: 'Shimmer', description: 'Bright & gentle',        tint: 'pink'   },
 ]
 const VOICE_SAMPLE = 'Hello, I am your translation assistant'
 
 const VOICE_CARD_WIDTH = 148
 const VOICE_CARD_GAP   = 10
 
-function VoiceCard({ label, description, selected, testing, onSelect, onTest }: {
-  label: string; description: string; selected: boolean; testing: boolean
+function VoiceCard({ label, description, tint, selected, testing, onSelect, onTest }: {
+  label: string; description: string; tint: Tint; selected: boolean; testing: boolean
   onSelect: () => void; onTest: () => void
 }) {
   const C = useColors()
@@ -56,35 +59,35 @@ function VoiceCard({ label, description, selected, testing, onSelect, onTest }: 
       accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${label} voice, ${description}`}
     >
       <Stack flex={1} gap={10} padding={14} borderRadius={18}
-        backgroundColor={selected ? C.primaryBg : C.bgCard}
-        borderWidth={selected ? 2 : 1} borderColor={selected ? C.primary : C.border}
+        backgroundColor={selected ? tint.bg : C.bgCard}
+        borderWidth={selected ? 2 : 1} borderColor={selected ? tint.color : C.border}
       >
         <Stack horizontal alignItems="center" justifyContent="space-between">
           <Stack width={36} height={36} borderRadius={12} alignItems="center" justifyContent="center"
-            backgroundColor={selected ? C.primary : C.bgInput}
+            backgroundColor={selected ? tint.color : tint.bg}
           >
-            <SpeakerIcon size={17} strokeWidth={2} color={selected ? C.white : C.textMuted} />
+            <SpeakerIcon size={17} strokeWidth={2} color={selected ? C.white : tint.color} />
           </Stack>
           <Stack width={22} height={22} borderRadius={11} alignItems="center" justifyContent="center"
-            borderWidth={2} borderColor={selected ? C.primary : C.border}
-            backgroundColor={selected ? C.primary : 'transparent'}
+            borderWidth={2} borderColor={selected ? tint.color : C.border}
+            backgroundColor={selected ? tint.color : 'transparent'}
           >
             {selected && <CheckIcon size={12} strokeWidth={3} color={C.white} />}
           </Stack>
         </Stack>
         <Stack flex={1}>
-          <Text variant="label" color={selected ? C.primary : C.textPrimary} fontWeight="800">{label}</Text>
+          <Text variant="label" color={selected ? tint.color : C.textPrimary} fontWeight="800">{label}</Text>
           <Text variant="caption" color={C.textMuted} numberOfLines={2}>{description}</Text>
         </Stack>
         <StyledPressable onPress={onTest} disabled={testing}
           flexDirection="row" alignItems="center" justifyContent="center" gap={6} height={32} borderRadius={16}
-          backgroundColor={selected ? C.bgCard : C.bgInput}
+          backgroundColor={selected ? C.bgCard : tint.bg}
           accessibilityRole="button" accessibilityLabel={`Test the ${label} voice`}
         >
           {testing
-            ? <ActivityIndicator size="small" color={C.primary} />
-            : <Text variant="caption" color={C.primary} fontWeight="800">{'\u25B6\uFE0E'}</Text>}
-          <Text variant="caption" color={C.primary} fontWeight="700">Test</Text>
+            ? <ActivityIndicator size="small" color={tint.color} />
+            : <Text variant="caption" color={tint.color} fontWeight="800">{'\u25B6\uFE0E'}</Text>}
+          <Text variant="caption" color={tint.color} fontWeight="700">Test</Text>
         </StyledPressable>
       </Stack>
     </StyledPressable>
@@ -129,7 +132,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 export default function ProfileScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const T      = tints(C)
+  const T      = tints(C, isDark)
   const { user, logout } = useAuthStore()
   const { mode, setMode } = useThemeStore()
   const { voice, setVoice } = useTranslatorStore()
@@ -274,7 +277,7 @@ export default function ProfileScreen() {
           contentOffset={{ x: Math.max(0, VOICES.findIndex((v) => v.id === voice) - 1) * (VOICE_CARD_WIDTH + VOICE_CARD_GAP), y: 0 }}
         >
           {VOICES.map((v) => (
-            <VoiceCard key={v.id} label={v.label} description={v.description}
+            <VoiceCard key={v.id} label={v.label} description={v.description} tint={T[v.tint]}
               selected={voice === v.id} testing={testing === v.id}
               onSelect={() => selectVoice(v.id, v.label)} onTest={() => testVoice(v.id)}
             />

@@ -29,6 +29,23 @@ export const LANGUAGES: Language[] = [
   { code: 'th',    label: 'Thai',                flag: '🇹🇭', tts: 'th' },
   { code: 'sv',    label: 'Swedish',             flag: '🇸🇪', tts: 'sv' },
   { code: 'uk',    label: 'Ukrainian',           flag: '🇺🇦', tts: 'uk' },
+  { code: 'yo',    label: 'Yoruba',              flag: '🇳🇬', tts: 'yo' },
+  { code: 'ig',    label: 'Igbo',                flag: '🇳🇬', tts: 'ig' },
+  { code: 'ha',    label: 'Hausa',               flag: '🇳🇬', tts: 'ha' },
+  { code: 'pcm',   label: 'Nigerian Pidgin',     flag: '🇳🇬', tts: 'pcm' },
+  { code: 'da',    label: 'Danish',              flag: '🇩🇰', tts: 'da' },
+  { code: 'fi',    label: 'Finnish',             flag: '🇫🇮', tts: 'fi' },
+  { code: 'el',    label: 'Greek',               flag: '🇬🇷', tts: 'el' },
+  { code: 'he',    label: 'Hebrew',              flag: '🇮🇱', tts: 'he', rtl: true },
+  { code: 'bn',    label: 'Bengali',             flag: '🇧🇩', tts: 'bn' },
+  { code: 'ur',    label: 'Urdu',                flag: '🇵🇰', tts: 'ur', rtl: true },
+  { code: 'fa',    label: 'Persian',             flag: '🇮🇷', tts: 'fa', rtl: true },
+  { code: 'ms',    label: 'Malay',               flag: '🇲🇾', tts: 'ms' },
+  { code: 'sw',    label: 'Swahili',             flag: '🇰🇪', tts: 'sw' },
+  { code: 'am',    label: 'Amharic',             flag: '🇪🇹', tts: 'am' },
+  { code: 'ro',    label: 'Romanian',            flag: '🇷🇴', tts: 'ro' },
+  { code: 'cs',    label: 'Czech',               flag: '🇨🇿', tts: 'cs' },
+  { code: 'hu',    label: 'Hungarian',           flag: '🇭🇺', tts: 'hu' },
 ]
 
 export const DEFAULT_SOURCE = 'en'

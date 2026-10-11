@@ -10,7 +10,7 @@ import { MailIcon, ChevronDownIcon, ChevronUpIcon, ChevronRightIcon } from '../s
 
 const FAQS = [
   { q: 'How accurate are the translations?', a: 'Tranquis uses GPT-4o, one of the most capable AI models, which provides high-quality translations for most languages. Results are best for major world languages.' },
-  { q: 'Which languages are supported?',    a: '20 languages including English, Spanish, French, German, Chinese, Japanese, Korean, Arabic, Portuguese, Russian, Hindi, and more.' },
+  { q: 'Which languages are supported?',    a: '37 languages including English, Spanish, French, German, Chinese, Japanese, Arabic, Hindi, Yoruba, Igbo, Hausa, Nigerian Pidgin, Swahili and more.' },
   { q: 'Does it work offline?',             a: 'Tranquis requires an internet connection to perform translations, as it uses cloud AI models. We are working on offline support for future versions.' },
   { q: 'How do I save a phrase?',           a: 'After a translation appears, tap the "Save" button on the result card. You can find all saved phrases in the Phrasebook tab.' },
   { q: 'What is Tranquis Pro?',             a: 'Unlimited translations, voice interpreter, camera OCR and text-to-speech playback. You can try it free for 7 days.' },

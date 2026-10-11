@@ -35,14 +35,16 @@ export default function LangPickerScreen() {
   }
 
   return (
+    // On iOS this is a page sheet that stops below the status bar, so skip the top inset
     <StyledPage flex={1} backgroundColor={C.bg}
+      edges={Platform.OS === 'ios' ? ['left', 'right', 'bottom'] : undefined}
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
     >
       <ScreenHeader
         title={side === 'source' ? 'Translate from' : 'Translate to'}
         onBackPress={() => goBack()}
-        marginTop={16}
+        marginTop={10}
       />
 
       {/* Search */}

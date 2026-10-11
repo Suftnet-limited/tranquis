@@ -64,7 +64,8 @@
             "targetSdkVersion": 36
           }
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "scheme": "tranquis",
     "experiments": {

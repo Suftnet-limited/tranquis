@@ -13,7 +13,7 @@ import { authService } from '../src/services/api'
 import { goBack } from '../src/utils'
 import { ResetPasswordSheet } from '../src/components/ResetPasswordSheet'
 import {
-  MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, LogOutIcon, TrashIcon, SparkleIcon,
+  MailIcon, LockIcon, HelpCircleIcon, ShieldIcon, FileTextIcon, LogOutIcon, TrashIcon, SparkleIcon,
   ChevronRightIcon, ChevronLeftIcon, SunIcon, MoonIcon, DeviceIcon, SpeakerIcon, CheckIcon, type IconComponent,
 } from '../src/icons'
 
@@ -176,8 +176,7 @@ export default function ProfileScreen() {
   const handleDelete = async () => {
     const ok = await dialogueService.confirm({
       title: 'Delete account?',
-      message: 'Your account, translation history and phrasebook will be permanently deleted. '
-        + 'This is the same account used for CareerMind/Interquis, so that data is deleted too. This cannot be undone.',
+      message: 'Your account, translation history and phrasebook will be permanently deleted. This cannot be undone.',
       icon: '⚠️',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
@@ -289,6 +288,7 @@ export default function ProfileScreen() {
         <Group title="SUPPORT">
           <SettingRow first Icon={HelpCircleIcon} tint={T.purple} label="Help & Support" onPress={() => router.push('/help' as any)} />
           <SettingRow Icon={ShieldIcon} tint={T.teal} label="Privacy Policy" onPress={() => router.push('/privacy' as any)} />
+          <SettingRow Icon={FileTextIcon} tint={T.blue} label="Terms of Use" onPress={() => router.push('/terms' as any)} />
         </Group>
 
         <Group title="SESSION">

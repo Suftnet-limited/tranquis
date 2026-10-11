@@ -6,6 +6,7 @@ import { Text } from '../src/components/Text'
 import { GradientButton } from '../src/components/AuthUI'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
+import { router } from 'expo-router'
 import { goBack } from '../src/utils'
 import { ChevronLeftIcon, CheckIcon, GlobeIcon } from '../src/icons'
 
@@ -231,6 +232,20 @@ export default function PremiumScreen() {
         Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically
         unless auto-renew is turned off at least 24 hours before the end of the current period.
       </Text>
+
+      <Stack horizontal alignItems="center" justifyContent="center" gap={8} marginTop={14}>
+        <StyledPressable onPress={() => router.push('/terms' as any)} padding={4}
+          accessibilityRole="link" accessibilityLabel="Terms of Use"
+        >
+          <Text variant="caption" color={C.primary} fontWeight="700">Terms of Use</Text>
+        </StyledPressable>
+        <Text variant="caption" color={C.textMuted}>·</Text>
+        <StyledPressable onPress={() => router.push('/privacy' as any)} padding={4}
+          accessibilityRole="link" accessibilityLabel="Privacy Policy"
+        >
+          <Text variant="caption" color={C.primary} fontWeight="700">Privacy Policy</Text>
+        </StyledPressable>
+      </Stack>
     </>,
   )
 }

@@ -101,6 +101,10 @@ export default function RegisterScreen() {
 
           <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 14, lineHeight: 18 }}>
             By signing up you agree to our{' '}
+            <Text variant="caption" color={C.primary} fontWeight="600" onPress={() => router.push('/terms' as any)}>
+              Terms of Use
+            </Text>
+            {' '}and{' '}
             <Text variant="caption" color={C.primary} fontWeight="600" onPress={() => router.push('/privacy' as any)}>
               Privacy Policy
             </Text>

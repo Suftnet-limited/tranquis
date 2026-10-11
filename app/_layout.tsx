@@ -21,12 +21,15 @@ import {
   getOnboardingSeen, ensureFreshInstall,
 } from '../src/stores'
 import { authService } from '../src/services/api'
+import { initSentry, Sentry } from '../src/services/sentry'
+
+initSentry()
 
 SplashScreen.preventAutoHideAsync()
 
 type InitialRoute = '/(tabs)' | '/onboarding' | '/auth/login'
 
-export default function RootLayout() {
+function RootLayout() {
   const [appReady, setAppReady]         = useState(false)
   const [initialRoute, setInitialRoute] = useState<InitialRoute | null>(null)
   const [navigated, setNavigated]       = useState(false)
@@ -109,9 +112,12 @@ export default function RootLayout() {
             <Stack.Screen name="profile"             options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="help"                options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="privacy"             options={{ headerShown: false, animation: 'slide_from_right' }} />
+            <Stack.Screen name="terms"               options={{ headerShown: false, animation: 'slide_from_right' }} />
           </Stack>
         </PortalManager>
       </GlobalPortalProvider>
     </GestureHandlerRootView>
   )
 }
+
+export default Sentry.wrap(RootLayout)

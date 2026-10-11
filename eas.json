@@ -12,13 +12,17 @@
       "distribution": "internal",
       "ios": { "simulator": false },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com",
+        "EXPO_PUBLIC_SENTRY_DSN": "",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },

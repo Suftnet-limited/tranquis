@@ -17,11 +17,11 @@ const SECTIONS = [
   },
   {
     title: 'Data retention',
-    body: 'You can delete your translation history and phrasebook at any time from within the app. Translations and saved phrases are deleted automatically after 12 months. You can also delete your account from your profile, which immediately removes your account and all its data. Your Tranquis account is shared with CareerMind/Interquis, so deleting it removes that data too.',
+    body: 'You can delete your translation history and phrasebook at any time from within the app. Translations and saved phrases are deleted automatically after 12 months. You can also delete your account from your profile, which immediately removes your account and all its data.',
   },
   {
     title: 'Third parties',
-    body: 'We use OpenAI for translations, RevenueCat for subscription management, and Expo/Apple/Google for app delivery. We do not sell your data to advertisers.',
+    body: 'We use OpenAI for translations, RevenueCat for subscription management, Sentry for crash reports (which never include what you translate), and Expo/Apple/Google for app delivery. We do not sell your data to advertisers.',
   },
   {
     title: 'Security',

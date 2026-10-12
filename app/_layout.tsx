@@ -135,4 +135,7 @@ function RootLayout() {
   )
 }
 
-export default Sentry.wrap(RootLayout)
+// Only wrap with Sentry after init — wrapping before init causes a warning.
+// In dev or when DSN is absent, initSentry() is a no-op, so we skip the wrap.
+const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN
+export default DSN && !__DEV__ ? Sentry.wrap(RootLayout) : RootLayout

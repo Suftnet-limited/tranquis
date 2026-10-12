@@ -3,6 +3,7 @@ import { Platform, Animated, ActivityIndicator } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
 import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, toastService } from 'fluent-styles'
 import * as FileSystem from 'expo-file-system'
+// TODO: migrate from expo-av to expo-audio — see src/hooks/useTTS.ts for context
 import { Audio } from 'expo-av'
 import { Text } from '../../src/components/Text'
 import { useColors, useIsDark, getLang } from '../../src/constants'

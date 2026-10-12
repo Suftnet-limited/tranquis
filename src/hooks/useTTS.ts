@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+// TODO: migrate from expo-av to expo-audio (useAudioPlayer) and expo-video once the
+// API stabilises — expo-av is deprecated as of SDK 53 but migration requires
+// rewriting the Audio.Sound / Audio.Recording usage throughout this file and voice.tsx.
+// Pinned at ~15.1.7 (last non-deprecated SDK 53 compatible release).
 import { Audio } from 'expo-av'
 import * as FileSystem from 'expo-file-system'
 import { toastService } from 'fluent-styles'

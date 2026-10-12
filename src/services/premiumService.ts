@@ -22,7 +22,7 @@
 import { Platform, Linking } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import Purchases, { type CustomerInfo } from 'react-native-purchases'
-import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT, WEB_SUBSCRIBE_URL } from '../constants/premium'
+import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT, WEB_SUBSCRIBE_URL, ENABLE_REVENUECAT } from '../constants/premium'
 import { API_BASE } from './api'
 
 // ─── RevenueCat API keys ──────────────────────────────────────────────────────
@@ -89,6 +89,7 @@ let initialized = false
 let initFailed   = false
 
 export const initializeRevenueCat = async (): Promise<void> => {
+  if (!ENABLE_REVENUECAT) return
   if (initialized || initFailed) return
 
   try {

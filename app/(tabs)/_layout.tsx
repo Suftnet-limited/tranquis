@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '../../src/constants'
 import { useAuthStore, usePremiumStore } from '../../src/stores'
 import { identifyUser } from '../../src/services/premiumService'
+import { ENABLE_REVENUECAT } from '../../src/constants/premium'
 
 const tabIcon = (Icon: IconComponent) =>
   ({ color }: { color: string }) => <Icon size={22} strokeWidth={2} color={color} />
@@ -16,6 +17,7 @@ export default function TabsLayout() {
 
   // Tie RevenueCat to the Tranquis account
   useEffect(() => {
+    if (!ENABLE_REVENUECAT) return
     if (!user?.id) return
     identifyUser(user.id)
       .then((info) => usePremiumStore.getState().setEntitlement(info.isActive, info.plan))

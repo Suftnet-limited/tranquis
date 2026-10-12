@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { AppState, Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { router } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -23,9 +23,31 @@ export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
   const [loading, setLoading] = useState(false)
-  const { isPremium, buyMonthly, buyYearly, restore } = usePremium()
+  const { isPremium, buyMonthly, buyYearly, restore, openWebSubscribe, refreshFromWeb } = usePremium()
 
   const [plan, setPlan] = useState<Plan>('yearly')
+  const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
+  const appStateRef = useRef(AppState.currentState)
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingWebReturn) {
+        setAwaitingWebReturn(false)
+        try {
+          await refreshFromWeb()
+        } catch {
+          // silent
+        }
+      }
+      appStateRef.current = nextState
+    })
+    return () => sub.remove()
+  }, [awaitingWebReturn, refreshFromWeb])
+
+  const handleWebSubscribe = async () => {
+    setAwaitingWebReturn(true)
+    await openWebSubscribe()
+  }
 
   const handlePurchase = () => {
     if (plan === 'yearly') buyYearly()
@@ -240,6 +262,50 @@ export default function PremiumScreen() {
             <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
           </TouchableOpacity>
 
+          {/* Web subscribe option */}
+          <Stack
+            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginTop={24}
+            gap={12}
+            style={{ borderWidth: 1, borderColor: C.border }}
+          >
+            <Stack gap={4}>
+              <Text variant="bodySmall" color={C.textSecondary} fontWeight="700" textAlign="center">
+                Or subscribe via web
+              </Text>
+              <Text variant="caption" color={C.textMuted} textAlign="center">
+                Weekly, monthly, 3-month, or annual plans
+              </Text>
+            </Stack>
+
+            {awaitingWebReturn ? (
+              <Stack
+                borderRadius={14} paddingVertical={14}
+                alignItems="center"
+                style={{ backgroundColor: `${C.primary}18` }}
+              >
+                <Text variant="caption" color={C.primary} fontWeight="600">
+                  Checking subscription…
+                </Text>
+              </Stack>
+            ) : (
+              <TouchableOpacity
+                style={[styles.webBtn, { borderColor: C.primary }]}
+                onPress={handleWebSubscribe}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Feather name="external-link" size={15} color={C.primary} style={{ marginRight: 8 }} />
+                <Text variant="bodySmall" color={C.primary} fontWeight="700">
+                  Open Web Checkout
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <Text variant="caption" color={C.textMuted} textAlign="center">
+              Opens in your browser. Return to the app when done.
+            </Text>
+          </Stack>
+
           {/* Legal */}
           <Text
             variant="caption"
@@ -286,5 +352,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     marginTop: 8,
+  },
+  webBtn: {
+    borderRadius: 14,
+    paddingVertical: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
 })

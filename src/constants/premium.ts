@@ -43,3 +43,5 @@ export const PREMIUM_FEATURES = [
 export const PREMIUM_ENTITLEMENT_ID = 'premium'
 export const PREMIUM_SHARED_TEST_PROJECT = false
 export const PREMIUM_STORAGE_KEY = 'tranquis_premium_entitlement'
+
+export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? 'https://edquis.com/subscribe/tranquis'

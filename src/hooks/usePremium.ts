@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toastService, loaderService } from 'fluent-styles'
-import { usePremiumStore } from '../stores'
+import { usePremiumStore, useAuthStore } from '../stores'
 import {
   purchaseMonthly, purchaseYearly,
   restorePurchases, getEntitlement, getPremiumPrices,
   resetPremiumForTesting,
+  openWebSubscribe as serviceOpenWebSubscribe,
+  fetchWebSubscriptionStatus,
 } from '../services/premiumService'
 
 export function usePremium() {
   const { isPremium, plan, hydrated, setEntitlement } = usePremiumStore()
+  const { accessToken, user } = useAuthStore()
   const [prices, setPrices] = useState({
     monthlyPrice:  null as string | null,
     yearlyPrice:   null as string | null,
@@ -70,6 +73,33 @@ export function usePremium() {
     toastService.info('Identity reset', 'Fresh anonymous RevenueCat user.')
   }, [refresh])
 
+  const refreshFromWeb = useCallback(async (): Promise<void> => {
+    if (!accessToken) return
+    try {
+      const status = await fetchWebSubscriptionStatus(accessToken)
+      if (status.is_pro) {
+        setEntitlement(true, (status.plan_name as any) ?? 'monthly')
+      }
+    } catch (err: any) {
+      if (__DEV__) console.log('[Premium] refreshFromWeb failed:', err?.message)
+    }
+  }, [accessToken, setEntitlement])
+
+  const openWebSubscribe = useCallback(async (
+    plan?: 'weekly' | 'monthly' | 'quarterly' | 'annual',
+  ): Promise<void> => {
+    const userId = user?.id
+    if (!userId) {
+      toastService.error('Sign in required', 'Please sign in to subscribe.')
+      return
+    }
+    try {
+      await serviceOpenWebSubscribe(userId, plan)
+    } catch (err: any) {
+      toastService.error('Could not open browser', err?.message)
+    }
+  }, [user?.id])
+
   return {
     isPremium,
     plan,
@@ -78,6 +108,8 @@ export function usePremium() {
     buyYearly,
     restore,
     resetForTesting,
+    refreshFromWeb,
+    openWebSubscribe,
     monthlyPrice:  prices.monthlyPrice,
     yearlyPrice:   prices.yearlyPrice,
   }

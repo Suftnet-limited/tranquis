@@ -19,10 +19,11 @@
  *   call into this file is guarded so a missing native module degrades to
  *   "not premium" instead of crashing the app.
  */
-import { Platform } from 'react-native'
+import { Platform, Linking } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import Purchases, { type CustomerInfo } from 'react-native-purchases'
-import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT } from '../constants/premium'
+import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT, WEB_SUBSCRIBE_URL } from '../constants/premium'
+import { API_BASE } from './api'
 
 // ─── RevenueCat API keys ──────────────────────────────────────────────────────
 // A RevenueCat key is tied to one store — an "appl_" key only authenticates
@@ -217,6 +218,39 @@ export const restorePurchases = async (): Promise<boolean> => {
     if (__DEV__) console.log('[Premium] Restore failed:', err?.message)
     return false
   }
+}
+
+// ─── Web subscription ─────────────────────────────────────────────────────────
+
+/**
+ * Opens the web subscription page in the device browser.
+ * The page handles Stripe Checkout; on return the app should call
+ * fetchWebSubscriptionStatus() to pick up the new pro status.
+ */
+export async function openWebSubscribe(
+  userId: string,
+  plan?: 'weekly' | 'monthly' | 'quarterly' | 'annual',
+): Promise<void> {
+  const params = new URLSearchParams({ user_id: userId })
+  if (plan) params.set('plan', plan)
+  const url = `${WEB_SUBSCRIBE_URL}?${params.toString()}`
+  const supported = await Linking.canOpenURL(url)
+  if (!supported) throw new Error('Cannot open subscription URL')
+  await Linking.openURL(url)
+}
+
+export interface WebSubscriptionStatus {
+  is_pro: boolean
+  pro_expires_at: string | null
+  plan_name: string | null
+}
+
+export async function fetchWebSubscriptionStatus(authToken: string): Promise<WebSubscriptionStatus> {
+  const res = await fetch(`${API_BASE}/api/v1/tranquis/subscription/status`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  })
+  if (!res.ok) throw new Error('Failed to fetch subscription status')
+  return res.json()
 }
 
 // ─── Dev-only: reset identity for testing ──────────────────────────────────────

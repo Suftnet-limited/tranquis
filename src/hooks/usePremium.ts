@@ -97,18 +97,21 @@ export function usePremium() {
     }
   }, [accessToken, setEntitlement])
 
+  /** Opens Stripe checkout in the browser. Resolves false if it couldn't be opened. */
   const openWebSubscribe = useCallback(async (
     plan?: 'weekly' | 'monthly' | 'quarterly' | 'annual',
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const userId = user?.id
     if (!userId) {
       toastService.error('Sign in required', 'Please sign in to subscribe.')
-      return
+      return false
     }
     try {
       await serviceOpenWebSubscribe(userId, plan)
+      return true
     } catch (err: any) {
       toastService.error('Could not open browser', err?.message)
+      return false
     }
   }, [user?.id])
 

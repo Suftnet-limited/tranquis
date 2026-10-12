@@ -131,7 +131,10 @@ export default function PremiumScreen() {
 
   const handleWebSubscribe = async (plan: WebPlan) => {
     setAwaitingWebReturn(true)
-    await openWebSubscribe(plan)
+    // Set before opening so the AppState listener catches the trip to the browser;
+    // undo it if the browser never opened (signed out, bad URL)
+    const opened = await openWebSubscribe(plan)
+    if (!opened) setAwaitingWebReturn(false)
   }
 
   const handleRcPurchase = () => {

@@ -7,8 +7,18 @@ import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
+import { ENABLE_REVENUECAT } from '../src/constants/premium'
 
-type Plan = 'yearly' | 'monthly'
+type RcPlan = 'yearly' | 'monthly'
+
+type WebPlan = 'weekly' | 'monthly' | 'quarterly' | 'annual'
+
+const WEB_PLANS: { id: WebPlan; label: string; price: string; period: string; badge?: string }[] = [
+  { id: 'weekly',    label: 'Weekly',    price: '£1.99',  period: 'per week' },
+  { id: 'monthly',   label: 'Monthly',   price: '£4.99',  period: 'per month', badge: '7-day free trial' },
+  { id: 'quarterly', label: '3-Month',   price: '£9.99',  period: 'every 3 months' },
+  { id: 'annual',    label: 'Annual',    price: '£29.99', period: 'per year', badge: 'Best Value' },
+]
 
 const FEATURES = [
   'Unlimited translations — no daily limits',
@@ -25,7 +35,7 @@ export default function PremiumScreen() {
   const [loading, setLoading] = useState(false)
   const { isPremium, buyMonthly, buyYearly, restore, openWebSubscribe, refreshFromWeb } = usePremium()
 
-  const [plan, setPlan] = useState<Plan>('yearly')
+  const [rcPlan, setRcPlan] = useState<RcPlan>('yearly')
   const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
   const appStateRef = useRef(AppState.currentState)
 
@@ -44,13 +54,13 @@ export default function PremiumScreen() {
     return () => sub.remove()
   }, [awaitingWebReturn, refreshFromWeb])
 
-  const handleWebSubscribe = async () => {
+  const handleWebSubscribe = async (plan: WebPlan) => {
     setAwaitingWebReturn(true)
-    await openWebSubscribe()
+    await openWebSubscribe(plan)
   }
 
-  const handlePurchase = () => {
-    if (plan === 'yearly') buyYearly()
+  const handleRcPurchase = () => {
+    if (rcPlan === 'yearly') buyYearly()
     else buyMonthly()
   }
 
@@ -88,7 +98,7 @@ export default function PremiumScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 48 }}
       >
-        {/* Hero gradient — dark blue */}
+        {/* Hero gradient */}
         <LinearGradient
           colors={['#0A1628', '#0F2040', '#112236']}
           style={styles.hero}
@@ -100,7 +110,6 @@ export default function PremiumScreen() {
             <Feather name="x" size={20} color="#FFF" />
           </StyledPressable>
 
-          {/* Globe emoji hero */}
           <Stack alignItems="center" gap={16} paddingTop={48} paddingBottom={36}>
             <Text style={{ fontSize: 72 }}>🌍</Text>
             <Stack alignItems="center" gap={8}>
@@ -110,10 +119,10 @@ export default function PremiumScreen() {
                 textAlign="center"
                 style={{ color: '#FFF', fontSize: 26, lineHeight: 34 }}
               >
-                Speak every language,{'\n'}anywhere
+                Go Premium
               </Text>
-              <Text variant="body" textAlign="center" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                Unlock the full Tranquis experience
+              <Text variant="body" textAlign="center" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                Translate freely, anywhere in the world
               </Text>
             </Stack>
           </Stack>
@@ -121,97 +130,80 @@ export default function PremiumScreen() {
 
         <Stack paddingHorizontal={20} paddingTop={24} gap={0}>
 
-          {/* Plan selector */}
+          {/* ── Web subscription plans (primary / always visible) ── */}
           <Stack gap={12} marginBottom={24}>
-            {/* Annual — first, with MOST POPULAR badge */}
-            <TouchableOpacity
-              onPress={() => setPlan('yearly')}
-              activeOpacity={0.85}
-            >
-              <Stack
-                borderRadius={18} padding={18}
-                style={[
-                  styles.planCard,
-                  {
-                    borderColor: plan === 'yearly' ? C.primary : C.border,
-                    borderWidth: plan === 'yearly' ? 2 : 1,
-                    backgroundColor: plan === 'yearly' ? `${C.primary}10` : C.bgCard,
-                  },
-                ]}
+            {WEB_PLANS.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => !awaitingWebReturn && handleWebSubscribe(p.id)}
+                activeOpacity={0.85}
+                disabled={awaitingWebReturn}
               >
-                <Stack horizontal alignItems="center" justifyContent="space-between">
-                  <Stack gap={3}>
+                <Stack
+                  borderRadius={18} padding={18}
+                  style={[
+                    styles.planCard,
+                    {
+                      borderColor: p.id === 'annual' ? C.primary : C.border,
+                      borderWidth: p.id === 'annual' ? 2 : 1,
+                      backgroundColor: p.id === 'annual' ? `${C.primary}10` : C.bgCard,
+                    },
+                  ]}
+                >
+                  <Stack horizontal alignItems="center" justifyContent="space-between">
+                    <Stack gap={3}>
+                      <Stack horizontal alignItems="center" gap={8}>
+                        <Text variant="body" color={C.textPrimary} fontWeight="800">{p.label}</Text>
+                        {p.badge && (
+                          <Stack
+                            backgroundColor={p.id === 'annual' ? C.primary : `${C.primary}25`}
+                            borderRadius={6} paddingHorizontal={8} paddingVertical={3}
+                          >
+                            <Text style={{ fontSize: 10, color: p.id === 'annual' ? '#FFF' : C.primary, fontWeight: '700', letterSpacing: 0.4 }}>
+                              {p.badge.toUpperCase()}
+                            </Text>
+                          </Stack>
+                        )}
+                      </Stack>
+                      <Text variant="caption" color={C.textMuted}>{p.period}</Text>
+                    </Stack>
                     <Stack horizontal alignItems="center" gap={10}>
-                      <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
-                      {/* MOST POPULAR badge */}
-                      <Stack
-                        backgroundColor={C.primary} borderRadius={6}
-                        paddingHorizontal={8} paddingVertical={3}
-                      >
-                        <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>
-                          MOST POPULAR
+                      <Stack alignItems="flex-end">
+                        <Text variant="title" color={p.id === 'annual' ? C.primary : C.textPrimary} fontWeight="800">
+                          {p.price}
                         </Text>
                       </Stack>
+                      <Stack
+                        width={32} height={32} borderRadius={16}
+                        alignItems="center" justifyContent="center"
+                        backgroundColor={`${C.primary}15`}
+                      >
+                        <Feather name="arrow-right" size={16} color={C.primary} />
+                      </Stack>
                     </Stack>
-                    <Text variant="caption" color={C.textMuted}>£3.33/mo · billed annually</Text>
                   </Stack>
-                  <Stack alignItems="flex-end" gap={2}>
-                    <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
-                    <Text variant="caption" color="#22C55E" fontWeight="600">Save 33%</Text>
-                  </Stack>
-                </Stack>
-                {/* Radio */}
-                <Stack position="absolute" top={18} right={16}>
-                  <Stack
-                    width={22} height={22} borderRadius={11}
-                    alignItems="center" justifyContent="center"
-                    backgroundColor={plan === 'yearly' ? C.primary : 'transparent'}
-                    style={{ borderWidth: 2, borderColor: plan === 'yearly' ? C.primary : C.border }}
-                  >
-                    {plan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
-                  </Stack>
-                </Stack>
-              </Stack>
-            </TouchableOpacity>
 
-            {/* Monthly */}
-            <TouchableOpacity
-              onPress={() => setPlan('monthly')}
-              activeOpacity={0.85}
-            >
-              <Stack
-                borderRadius={18} padding={18}
-                style={[
-                  styles.planCard,
-                  {
-                    borderColor: plan === 'monthly' ? C.primary : C.border,
-                    borderWidth: plan === 'monthly' ? 2 : 1,
-                    backgroundColor: plan === 'monthly' ? `${C.primary}10` : C.bgCard,
-                  },
-                ]}
-              >
-                <Stack horizontal alignItems="center" justifyContent="space-between">
-                  <Stack gap={3}>
-                    <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
-                    <Text variant="caption" color={C.textMuted}>Billed monthly</Text>
-                  </Stack>
-                  <Stack alignItems="flex-end" gap={2}>
-                    <Text variant="title" color={C.textPrimary} fontWeight="800">£4.99</Text>
-                    <Text variant="caption" color={C.textMuted}>per month</Text>
-                  </Stack>
+                  {awaitingWebReturn && (
+                    <Stack
+                      position="absolute" top={0} left={0} right={0} bottom={0}
+                      borderRadius={18}
+                      alignItems="center" justifyContent="center"
+                      style={{ backgroundColor: `${C.bg}CC` }}
+                    >
+                      <Text variant="caption" color={C.primary} fontWeight="600">Checking subscription…</Text>
+                    </Stack>
+                  )}
                 </Stack>
-                <Stack position="absolute" top={18} right={16}>
-                  <Stack
-                    width={22} height={22} borderRadius={11}
-                    alignItems="center" justifyContent="center"
-                    backgroundColor={plan === 'monthly' ? C.primary : 'transparent'}
-                    style={{ borderWidth: 2, borderColor: plan === 'monthly' ? C.primary : C.border }}
-                  >
-                    {plan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
-                  </Stack>
-                </Stack>
-              </Stack>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </Stack>
+
+          {/* Stripe trust note */}
+          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginBottom={28}>
+            <Feather name="lock" size={13} color={C.textMuted} />
+            <Text variant="caption" color={C.textMuted} fontWeight="500">
+              Secure payment via Stripe
+            </Text>
           </Stack>
 
           {/* Feature checklist */}
@@ -236,86 +228,117 @@ export default function PremiumScreen() {
             ))}
           </Stack>
 
-          {/* CTA button */}
-          <TouchableOpacity
-            onPress={handlePurchase}
-            disabled={loading}
-            activeOpacity={0.85}
-            style={[styles.ctaBtn, { backgroundColor: C.primary }]}
-          >
-            <Text variant="body" color="#FFF" fontWeight="800">
-              Start Free 7-Day Trial →
-            </Text>
-          </TouchableOpacity>
-          <Text
-            variant="caption"
-            color={C.textMuted}
-            textAlign="center"
-            style={{ marginTop: 10, marginBottom: 6 }}
-          >
-            {plan === 'yearly' ? '£39.99/year after trial · ' : '£4.99/month after trial · '}
-            Cancel anytime
-          </Text>
-
-          {/* Restore */}
-          <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 8 }}>
-            <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
-          </TouchableOpacity>
-
-          {/* Web subscribe option */}
-          <Stack
-            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginTop={24}
-            gap={12}
-            style={{ borderWidth: 1, borderColor: C.border }}
-          >
-            <Stack gap={4}>
+          {/* ── RevenueCat / Apple IAP section (gated) ── */}
+          {ENABLE_REVENUECAT && (
+            <Stack gap={12} marginBottom={24}>
               <Text variant="bodySmall" color={C.textSecondary} fontWeight="700" textAlign="center">
-                Or subscribe via web
+                Or pay with Apple Pay
               </Text>
-              <Text variant="caption" color={C.textMuted} textAlign="center">
-                Weekly, monthly, 3-month, or annual plans
-              </Text>
-            </Stack>
 
-            {awaitingWebReturn ? (
-              <Stack
-                borderRadius={14} paddingVertical={14}
-                alignItems="center"
-                style={{ backgroundColor: `${C.primary}18` }}
-              >
-                <Text variant="caption" color={C.primary} fontWeight="600">
-                  Checking subscription…
-                </Text>
-              </Stack>
-            ) : (
+              {/* Annual RC card */}
+              <TouchableOpacity onPress={() => setRcPlan('yearly')} activeOpacity={0.85}>
+                <Stack
+                  borderRadius={18} padding={18}
+                  style={[styles.planCard, {
+                    borderColor: rcPlan === 'yearly' ? C.primary : C.border,
+                    borderWidth: rcPlan === 'yearly' ? 2 : 1,
+                    backgroundColor: rcPlan === 'yearly' ? `${C.primary}10` : C.bgCard,
+                  }]}
+                >
+                  <Stack horizontal alignItems="center" justifyContent="space-between">
+                    <Stack gap={3}>
+                      <Stack horizontal alignItems="center" gap={10}>
+                        <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
+                        <Stack backgroundColor={C.primary} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
+                          <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>MOST POPULAR</Text>
+                        </Stack>
+                      </Stack>
+                      <Text variant="caption" color={C.textMuted}>£3.33/mo · billed annually</Text>
+                    </Stack>
+                    <Stack alignItems="flex-end" gap={2}>
+                      <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
+                      <Text variant="caption" color="#22C55E" fontWeight="600">Save 33%</Text>
+                    </Stack>
+                  </Stack>
+                  <Stack position="absolute" top={18} right={16}>
+                    <Stack
+                      width={22} height={22} borderRadius={11}
+                      alignItems="center" justifyContent="center"
+                      backgroundColor={rcPlan === 'yearly' ? C.primary : 'transparent'}
+                      style={{ borderWidth: 2, borderColor: rcPlan === 'yearly' ? C.primary : C.border }}
+                    >
+                      {rcPlan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                    </Stack>
+                  </Stack>
+                </Stack>
+              </TouchableOpacity>
+
+              {/* Monthly RC card */}
+              <TouchableOpacity onPress={() => setRcPlan('monthly')} activeOpacity={0.85}>
+                <Stack
+                  borderRadius={18} padding={18}
+                  style={[styles.planCard, {
+                    borderColor: rcPlan === 'monthly' ? C.primary : C.border,
+                    borderWidth: rcPlan === 'monthly' ? 2 : 1,
+                    backgroundColor: rcPlan === 'monthly' ? `${C.primary}10` : C.bgCard,
+                  }]}
+                >
+                  <Stack horizontal alignItems="center" justifyContent="space-between">
+                    <Stack gap={3}>
+                      <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
+                      <Text variant="caption" color={C.textMuted}>Billed monthly</Text>
+                    </Stack>
+                    <Stack alignItems="flex-end" gap={2}>
+                      <Text variant="title" color={C.textPrimary} fontWeight="800">£4.99</Text>
+                      <Text variant="caption" color={C.textMuted}>per month</Text>
+                    </Stack>
+                  </Stack>
+                  <Stack position="absolute" top={18} right={16}>
+                    <Stack
+                      width={22} height={22} borderRadius={11}
+                      alignItems="center" justifyContent="center"
+                      backgroundColor={rcPlan === 'monthly' ? C.primary : 'transparent'}
+                      style={{ borderWidth: 2, borderColor: rcPlan === 'monthly' ? C.primary : C.border }}
+                    >
+                      {rcPlan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                    </Stack>
+                  </Stack>
+                </Stack>
+              </TouchableOpacity>
+
+              {/* RC CTA */}
               <TouchableOpacity
-                style={[styles.webBtn, { borderColor: C.primary }]}
-                onPress={handleWebSubscribe}
+                onPress={handleRcPurchase}
                 disabled={loading}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
+                style={[styles.ctaBtn, { backgroundColor: C.primary }]}
               >
-                <Feather name="external-link" size={15} color={C.primary} style={{ marginRight: 8 }} />
-                <Text variant="bodySmall" color={C.primary} fontWeight="700">
-                  Open Web Checkout
+                <Text variant="body" color="#FFF" fontWeight="800">
+                  Start Free 7-Day Trial →
                 </Text>
               </TouchableOpacity>
-            )}
+              <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 6 }}>
+                {rcPlan === 'yearly' ? '£39.99/year after trial · ' : '£4.99/month after trial · '}
+                Cancel anytime
+              </Text>
 
-            <Text variant="caption" color={C.textMuted} textAlign="center">
-              Opens in your browser. Return to the app when done.
-            </Text>
-          </Stack>
+              {/* Restore — only with RevenueCat */}
+              <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 4 }}>
+                <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
+              </TouchableOpacity>
 
-          {/* Legal */}
-          <Text
-            variant="caption"
-            color={C.textMuted}
-            textAlign="center"
-            style={{ marginTop: 20, lineHeight: 18, paddingHorizontal: 8 }}
-          >
-            Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically
-            renews unless auto-renew is turned off at least 24 hours before the end of the current period.
-          </Text>
+              {/* Apple legal copy */}
+              <Text
+                variant="caption"
+                color={C.textMuted}
+                textAlign="center"
+                style={{ marginTop: 12, lineHeight: 18, paddingHorizontal: 8 }}
+              >
+                Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically
+                renews unless auto-renew is turned off at least 24 hours before the end of the current period.
+              </Text>
+            </Stack>
+          )}
         </Stack>
       </ScrollView>
     </StyledPage>
@@ -352,13 +375,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     marginTop: 8,
-  },
-  webBtn: {
-    borderRadius: 14,
-    paddingVertical: 13,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
 })

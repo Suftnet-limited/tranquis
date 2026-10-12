@@ -8,6 +8,7 @@ import {
   openWebSubscribe as serviceOpenWebSubscribe,
   fetchWebSubscriptionStatus,
 } from '../services/premiumService'
+import { ENABLE_REVENUECAT } from '../constants/premium'
 
 export function usePremium() {
   const { isPremium, plan, hydrated, setEntitlement } = usePremiumStore()
@@ -19,17 +20,18 @@ export function usePremium() {
   })
 
   const refresh = useCallback(async () => {
+    if (!ENABLE_REVENUECAT) return { isActive: false, plan: null, expiresAt: null, purchasedAt: null } as any
     const info = await getEntitlement()
     setEntitlement(info.isActive, info.plan)
     return info
   }, [setEntitlement])
 
   useEffect(() => {
-    if (!hydrated) refresh().catch(() => {})
+    if (!hydrated && ENABLE_REVENUECAT) refresh().catch(() => {})
   }, [hydrated, refresh])
 
   useEffect(() => {
-    getPremiumPrices().then(setPrices).catch(() => {})
+    if (ENABLE_REVENUECAT) getPremiumPrices().then(setPrices).catch(() => {})
   }, [])
 
   const buy = useCallback(async (purchaseFn: () => Promise<boolean>) => {
@@ -48,10 +50,17 @@ export function usePremium() {
     }
   }, [refresh])
 
-  const buyMonthly = useCallback(() => buy(purchaseMonthly), [buy])
-  const buyYearly  = useCallback(() => buy(purchaseYearly),  [buy])
+  const buyMonthly = useCallback(async () => {
+    if (!ENABLE_REVENUECAT) return false
+    return buy(purchaseMonthly)
+  }, [buy])
+  const buyYearly = useCallback(async () => {
+    if (!ENABLE_REVENUECAT) return false
+    return buy(purchaseYearly)
+  }, [buy])
 
   const restore = useCallback(async () => {
+    if (!ENABLE_REVENUECAT) return false
     try {
       const restored = await loaderService.wrap(restorePurchases, { label: 'Restoring…', variant: 'spinner' })
       if (restored) {

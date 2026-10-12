@@ -114,6 +114,9 @@ export default function PremiumScreen() {
   const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
   const appStateRef = useRef(AppState.currentState)
 
+  // A subscription may have been bought on the web since the app last checked
+  useEffect(() => { refreshFromWeb() }, [refreshFromWeb])
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingWebReturn) {

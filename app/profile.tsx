@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { ActivityIndicator, Platform, ScrollView } from 'react-native'
-import { router } from 'expo-router'
+import React, { useCallback, useState } from 'react'
+import { ActivityIndicator, Platform, RefreshControl, ScrollView } from 'react-native'
+import { router, useFocusEffect } from 'expo-router'
 import {
   StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable,
   toastService, dialogueService,
@@ -139,7 +139,16 @@ export default function ProfileScreen() {
   const { voice, setVoice } = useTranslatorStore()
   const [testing, setTesting] = useState<TtsVoice | null>(null)
   const [passwordOpen, setPasswordOpen] = useState(false)
-  const { isPremium } = usePremium()
+  const { isPremium, refreshFromWeb } = usePremium()
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Pick up a subscription bought on the web whenever Settings is shown
+  useFocusEffect(useCallback(() => { refreshFromWeb() }, [refreshFromWeb]))
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try { await refreshFromWeb() } finally { setRefreshing(false) }
+  }
 
   const theme = isDark ? 'dark' : 'light'
 
@@ -219,6 +228,7 @@ export default function ProfileScreen() {
         style={{ backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingTop: 18, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} colors={[C.primary]} />}
       >
         {/* Pro */}
         <StyledPressable onPress={() => router.push('/premium' as any)} accessibilityRole="button" accessibilityLabel="Tranquis Pro"

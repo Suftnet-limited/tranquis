@@ -1,3 +1,5 @@
+import { API_BASE } from '../services/api'
+
 // ─── Tranquis Pro configuration ───────────────────────────────────────────
 //
 // Gating: free users get a daily translation quota (50 translations/day).
@@ -44,7 +46,9 @@ export const PREMIUM_ENTITLEMENT_ID = 'premium'
 export const PREMIUM_SHARED_TEST_PROJECT = false
 export const PREMIUM_STORAGE_KEY = 'tranquis_premium_entitlement'
 
-export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? 'https://edquis.com/subscribe/tranquis'
+// Stripe checkout hosted by the CareerMind backend, which owns Tranquis users: its success page and
+// webhook set is_pro, which /api/v1/tranquis/subscription/status then reports back to the app
+export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? `${API_BASE}/tranquis/subscribe`
 
 // Set to true only when RevenueCat keys are configured and IAP is ready for release
 export const ENABLE_REVENUECAT = process.env.EXPO_PUBLIC_ENABLE_REVENUECAT === 'true'

@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Platform } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { AppState, Platform } from 'react-native'
 import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
 import { StyledPage, StyledScrollView, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
@@ -136,8 +136,30 @@ function PlanCard({ title, subtitle, price, per, note, saving, popular, selected
 export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const { isPremium, plan: activePlan, buyMonthly, buyYearly, restore, loading, monthlyPrice, yearlyPrice } = usePremium()
+  const { isPremium, plan: activePlan, buyMonthly, buyYearly, restore, loading, openWebSubscribe, refreshFromWeb, monthlyPrice, yearlyPrice } = usePremium()
   const [plan, setPlan] = useState<Plan>('yearly')
+  const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
+  const appStateRef = useRef(AppState.currentState)
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingWebReturn) {
+        setAwaitingWebReturn(false)
+        try {
+          await refreshFromWeb()
+        } catch {
+          // silent
+        }
+      }
+      appStateRef.current = nextState
+    })
+    return () => sub.remove()
+  }, [awaitingWebReturn, refreshFromWeb])
+
+  const handleWebSubscribe = async () => {
+    setAwaitingWebReturn(true)
+    await openWebSubscribe()
+  }
 
   const monthly = monthlyPrice ?? FALLBACK.monthly
   const yearly  = yearlyPrice ?? FALLBACK.yearly
@@ -227,6 +249,41 @@ export default function PremiumScreen() {
       >
         <Text variant="bodySmall" color={C.primary} fontWeight="700">Restore purchases</Text>
       </StyledPressable>
+
+      <Stack
+        backgroundColor={C.bgCard} borderRadius={16} padding={16} marginTop={20}
+        gap={10}
+        style={{ borderWidth: 1, borderColor: C.border }}
+      >
+        <Stack gap={3} alignItems="center">
+          <Text variant="bodySmall" color={C.textSecondary} fontWeight="700">Or subscribe via web</Text>
+          <Text variant="caption" color={C.textMuted} textAlign="center">
+            Weekly £1.99 · Monthly £4.99 · 3-Month £9.99 · Annual £29.99
+          </Text>
+        </Stack>
+        {awaitingWebReturn ? (
+          <Stack
+            borderRadius={12} paddingVertical={12}
+            alignItems="center"
+            style={{ backgroundColor: `${C.primary}18` }}
+          >
+            <Text variant="caption" color={C.primary} fontWeight="600">Checking subscription…</Text>
+          </Stack>
+        ) : (
+          <StyledPressable
+            onPress={handleWebSubscribe}
+            borderRadius={12} paddingVertical={12}
+            alignItems="center" justifyContent="center"
+            style={{ borderWidth: 1.5, borderColor: C.primary }}
+            accessibilityRole="button" accessibilityLabel="Subscribe on Web"
+          >
+            <Text variant="bodySmall" color={C.primary} fontWeight="700">Subscribe on Web →</Text>
+          </StyledPressable>
+        )}
+        <Text variant="caption" color={C.textMuted} textAlign="center">
+          Opens in your browser. Return to the app when done.
+        </Text>
+      </Stack>
 
       <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 18, lineHeight: 17, paddingHorizontal: 8, opacity: 0.8 }}>
         Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically

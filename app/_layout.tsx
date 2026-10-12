@@ -3,7 +3,8 @@ import { Stack, router } from 'expo-router'
 import { GlobalPortalProvider, PortalManager } from 'fluent-styles'
 import * as SplashScreen from 'expo-splash-screen'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { LogBox } from 'react-native'
+import { AppState, LogBox } from 'react-native'
+import { usePremium } from '../src/hooks'
 
 LogBox.ignoreLogs(['Error configuring Purchases', 'Purchase was cancelled'])
 
@@ -33,6 +34,7 @@ function RootLayout() {
   const [appReady, setAppReady]         = useState(false)
   const [initialRoute, setInitialRoute] = useState<InitialRoute | null>(null)
   const [navigated, setNavigated]       = useState(false)
+  const { refreshFromWeb } = usePremium()
 
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
@@ -95,6 +97,19 @@ function RootLayout() {
   useEffect(() => {
     if (navigated) SplashScreen.hideAsync()
   }, [navigated])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active') {
+        try {
+          await refreshFromWeb()
+        } catch {
+          // silent — don't interrupt app resume if this fails
+        }
+      }
+    })
+    return () => subscription.remove()
+  }, [refreshFromWeb])
 
   if (!isReady) return null
 

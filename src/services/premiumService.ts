@@ -89,7 +89,7 @@ let initialized = false
 let initFailed   = false
 
 export const initializeRevenueCat = async (): Promise<void> => {
-  if (!ENABLE_REVENUECAT) return
+  if (!ENABLE_REVENUECAT) { initFailed = true; return; }
   if (initialized || initFailed) return
 
   try {

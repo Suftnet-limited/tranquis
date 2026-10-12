@@ -124,6 +124,7 @@ function RootLayout() {
             <Stack.Screen name="auth/register"       options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="lang-picker"   options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="premium"             options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="subscription/success" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
             <Stack.Screen name="profile"             options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="help"                options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="privacy"             options={{ headerShown: false, animation: 'slide_from_right' }} />

@@ -1,379 +1,306 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { AppState, Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import { ActivityIndicator, AppState, Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { router } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
+import { StyledPage, Stack } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
 import { ENABLE_REVENUECAT } from '../src/constants/premium'
 
-type RcPlan = 'yearly' | 'monthly'
-
 type WebPlan = 'weekly' | 'monthly' | 'quarterly' | 'annual'
 
-const WEB_PLANS: { id: WebPlan; label: string; price: string; period: string; badge?: string }[] = [
-  { id: 'weekly',    label: 'Weekly',    price: '£1.99',  period: 'per week' },
-  { id: 'monthly',   label: 'Monthly',   price: '£4.99',  period: 'per month', badge: '7-day free trial' },
-  { id: 'quarterly', label: '3-Month',   price: '£9.99',  period: 'every 3 months' },
-  { id: 'annual',    label: 'Annual',    price: '£29.99', period: 'per year', badge: 'Best Value' },
+// Mirrors TRANQUIS_PLANS on the web checkout (learnify/src/lib/tranquis-plans.ts) — keep prices in sync
+type Plan = {
+  id:       WebPlan
+  label:    string
+  terms:    string
+  price:    string   // headline price, per `unit`
+  unit:     string
+  subPrice: string   // what is actually billed
+  save?:    string
+  trialDays?: number
+  rcPlan?:  'monthly' | 'yearly'   // matching App Store product when RevenueCat is on
+}
+
+const PLANS: Plan[] = [
+  { id: 'annual',  label: 'Pro Annual',  terms: 'Billed annually · cancel anytime', price: '£2.50', unit: '/mo', subPrice: '£29.99/year',  save: 'Save 50%', rcPlan: 'yearly' },
+  { id: 'monthly', label: 'Pro Monthly', terms: 'Billed monthly · cancel anytime',  price: '£4.99', unit: '/mo', subPrice: '£4.99/month', trialDays: 7, rcPlan: 'monthly' },
+]
+
+// Shorter plans, tucked behind "More plans" to keep the mock's two-card layout
+const MORE_PLANS: Plan[] = [
+  { id: 'quarterly', label: 'Pro 3-Month', terms: 'Billed every 3 months · cancel anytime', price: '£3.33', unit: '/mo', subPrice: '£9.99/3 months' },
+  { id: 'weekly',    label: 'Pro Weekly',  terms: 'Billed weekly · great for a trip',      price: '£1.99', unit: '/wk', subPrice: '£1.99/week' },
 ]
 
 const FEATURES = [
-  'Unlimited translations — no daily limits',
-  'Live voice interpreter in real time',
-  'Camera & OCR translation',
-  'Text-to-speech playback',
-  'Unlimited phrasebook',
-  '20+ languages including rare & regional',
+  'Unlimited text, voice & camera translations',
+  'Live voice interpreter (two-way, real-time)',
+  'Natural text-to-speech playback',
+  '37 languages, including Nigerian languages',
+  'Context & tone aware translations',
+  'Unlimited phrasebook saves',
 ]
+
+const MOST_POPULAR = '#7C3AED'
+
+const close = () => (router.canGoBack() ? router.back() : router.replace('/'))
+
+function Header({ C }: { C: ReturnType<typeof useColors> }) {
+  return (
+    <Stack horizontal alignItems="center" gap={14}
+      paddingHorizontal={20} paddingVertical={14}
+      style={{ borderBottomWidth: 1, borderBottomColor: C.border }}
+    >
+      <TouchableOpacity onPress={close} activeOpacity={0.7} hitSlop={8}
+        style={[styles.backBtn, { backgroundColor: C.bgInput }]}
+        accessibilityRole="button" accessibilityLabel="Go back"
+      >
+        <Feather name="chevron-left" size={20} color={C.textPrimary} />
+      </TouchableOpacity>
+      <Stack>
+        <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 18 }}>Tranquis Pro</Text>
+        <Text variant="caption" color={C.textMuted}>Unlock everything</Text>
+      </Stack>
+    </Stack>
+  )
+}
+
+function PlanCard({ plan, selected, popular, onPress, C }: {
+  plan: Plan; selected: boolean; popular?: boolean; onPress: () => void; C: ReturnType<typeof useColors>
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85}
+      accessibilityRole="radio" accessibilityState={{ selected }}
+      style={{ marginTop: popular ? 12 : 0 }}
+    >
+      <Stack
+        horizontal alignItems="center" justifyContent="space-between"
+        borderRadius={18} paddingHorizontal={18} paddingVertical={20}
+        style={{
+          borderWidth: 2,
+          borderColor:     selected ? C.primary : C.border,
+          backgroundColor: selected ? `${C.primary}14` : C.bgCard,
+        }}
+      >
+        <Stack flex={1} gap={4} paddingRight={10}>
+          <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 17 }}>{plan.label}</Text>
+          <Text variant="caption" color={C.textMuted}>{plan.terms}</Text>
+        </Stack>
+        <Stack alignItems="flex-end" gap={2}>
+          <Text color={C.textPrimary}>
+            <Text color={C.textPrimary} fontWeight="800" style={{ fontSize: 22 }}>{plan.price}</Text>
+            <Text variant="caption" color={C.textMuted}>{plan.unit}</Text>
+          </Text>
+          <Text variant="caption" color={C.textMuted}>{plan.subPrice}</Text>
+          {plan.save && (
+            <Stack backgroundColor={C.primaryBg} borderRadius={8} paddingHorizontal={8} paddingVertical={2} marginTop={2}>
+              <Text variant="caption" color={C.primaryDark} fontWeight="700">{plan.save}</Text>
+            </Stack>
+          )}
+        </Stack>
+      </Stack>
+
+      {popular && (
+        <Stack position="absolute" top={-11} alignSelf="center"
+          backgroundColor={MOST_POPULAR} borderRadius={10} paddingHorizontal={12} paddingVertical={3}
+        >
+          <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '800', letterSpacing: 0.8 }}>MOST POPULAR</Text>
+        </Stack>
+      )}
+    </TouchableOpacity>
+  )
+}
 
 export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const [loading, setLoading] = useState(false)
   const { isPremium, buyMonthly, buyYearly, restore, openWebSubscribe, refreshFromWeb } = usePremium()
 
-  const [rcPlan, setRcPlan] = useState<RcPlan>('yearly')
+  const [selected, setSelected] = useState<WebPlan>('monthly')
+  const [showMore, setShowMore] = useState(false)
   const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
+  const [rcBusy, setRcBusy] = useState(false)
   const appStateRef = useRef(AppState.currentState)
 
+  const plan = [...PLANS, ...MORE_PLANS].find((p) => p.id === selected)!
+
+  // Coming back from the browser without using the deep link (e.g. app switcher)
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (nextState) => {
       if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingWebReturn) {
         setAwaitingWebReturn(false)
-        try {
-          await refreshFromWeb()
-        } catch {
-          // silent
-        }
+        await refreshFromWeb().catch(() => false)
       }
       appStateRef.current = nextState
     })
     return () => sub.remove()
   }, [awaitingWebReturn, refreshFromWeb])
 
-  const handleWebSubscribe = async (plan: WebPlan) => {
+  const handleSubscribe = async () => {
+    if (awaitingWebReturn) return
     setAwaitingWebReturn(true)
-    await openWebSubscribe(plan)
+    await openWebSubscribe(plan.id)
+    // If the browser never opened (signed out, no handler) don't leave the button stuck
+    if (AppState.currentState === 'active') setTimeout(() => {
+      if (AppState.currentState === 'active') setAwaitingWebReturn(false)
+    }, 1500)
   }
 
-  const handleRcPurchase = () => {
-    if (rcPlan === 'yearly') buyYearly()
-    else buyMonthly()
+  const handleApplePurchase = async () => {
+    if (!plan.rcPlan || rcBusy) return
+    setRcBusy(true)
+    try {
+      if (plan.rcPlan === 'yearly') await buyYearly()
+      else await buyMonthly()
+    } finally {
+      setRcBusy(false)
+    }
+  }
+
+  const statusBar = {
+    statusBarStyle: (isDark ? 'light-content' : 'dark-content') as 'light-content' | 'dark-content',
+    statusBarBackgroundColor: Platform.OS === 'android' ? C.bgCard : undefined,
   }
 
   if (isPremium) {
     return (
-      <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
-        statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      >
-        <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={16}>
-          <Text style={{ fontSize: 56 }}>🌍</Text>
-          <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
-            You're on Pro!
-          </Text>
+      <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar {...statusBar}>
+        <Header C={C} />
+        <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={14}>
+          <Text style={{ fontSize: 56, lineHeight: 68 }}>🌍</Text>
+          <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">You're on Pro!</Text>
           <Text variant="body" color={C.textSecondary} textAlign="center">
             Enjoy unlimited translations and all Pro features.
           </Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={[styles.backBtn, { backgroundColor: C.primary }]}
-            activeOpacity={0.8}
+          <TouchableOpacity onPress={close} activeOpacity={0.85}
+            style={[styles.cta, { backgroundColor: C.primary, alignSelf: 'stretch', marginTop: 12 }]}
           >
-            <Text variant="body" color="#FFF" fontWeight="700">Go back</Text>
+            <Text variant="body" color="#FFF" fontWeight="800" style={{ fontSize: 17 }}>Start translating →</Text>
           </TouchableOpacity>
         </Stack>
       </StyledPage>
     )
   }
 
+  const ctaLabel = plan.trialDays ? `Start Free ${plan.trialDays}-Day Trial →` : `Continue with ${plan.label} →`
+  const footnote = plan.trialDays
+    ? `Then ${plan.subPrice}. Cancel anytime before renewal.`
+    : `${plan.subPrice}, renews automatically. Cancel anytime.`
+
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
-      statusBarStyle="light-content"
-      statusBarBackgroundColor={Platform.OS === 'android' ? '#0A1628' : undefined}
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 48 }}
+    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar {...statusBar}>
+      <Header C={C} />
+
+      <ScrollView showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 28, paddingBottom: 40 }}
       >
-        {/* Hero gradient */}
-        <LinearGradient
-          colors={['#0A1628', '#0F2040', '#112236']}
-          style={styles.hero}
-        >
-          {/* Close */}
-          <StyledPressable onPress={() => router.back()}
-            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+        {/* Hero */}
+        <Stack alignItems="center" marginBottom={26}>
+          <Text style={{ fontSize: 52, lineHeight: 64, marginBottom: 10 }}>🌍</Text>
+          <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center"
+            style={{ fontSize: 28, lineHeight: 34, marginBottom: 10 }}
           >
-            <Feather name="x" size={20} color="#FFF" />
-          </StyledPressable>
+            Speak every language,{'\n'}anywhere
+          </Text>
+          <Text variant="body" color={C.textMuted} textAlign="center" style={{ lineHeight: 22, paddingHorizontal: 8 }}>
+            Unlimited translations, voice interpreter, camera translate, and more.
+          </Text>
+        </Stack>
 
-          <Stack alignItems="center" gap={16} paddingTop={48} paddingBottom={36}>
-            <Text style={{ fontSize: 72 }}>🌍</Text>
-            <Stack alignItems="center" gap={8}>
-              <Text
-                variant="header"
-                fontWeight="800"
-                textAlign="center"
-                style={{ color: '#FFF', fontSize: 26, lineHeight: 34 }}
-              >
-                Go Premium
-              </Text>
-              <Text variant="body" textAlign="center" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                Translate freely, anywhere in the world
-              </Text>
+        {/* Plans */}
+        <Stack gap={14}>
+          {PLANS.map((p) => (
+            <PlanCard key={p.id} plan={p} C={C}
+              popular={p.id === 'annual'}
+              selected={selected === p.id}
+              onPress={() => setSelected(p.id)}
+            />
+          ))}
+          {showMore && MORE_PLANS.map((p) => (
+            <PlanCard key={p.id} plan={p} C={C}
+              selected={selected === p.id}
+              onPress={() => setSelected(p.id)}
+            />
+          ))}
+        </Stack>
+        {!showMore && (
+          <TouchableOpacity onPress={() => setShowMore(true)} activeOpacity={0.7} style={{ alignSelf: 'center', paddingVertical: 10 }}>
+            <Text variant="caption" color={C.textSecondary} fontWeight="600">More plans: weekly & 3-month</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Features */}
+        <Stack gap={12} marginTop={showMore ? 22 : 12} marginBottom={26}>
+          {FEATURES.map((f) => (
+            <Stack key={f} horizontal alignItems="center" gap={14}>
+              <Feather name="check" size={18} color={C.primary} />
+              <Text variant="body" color={C.textSecondary} style={{ flex: 1 }}>{f}</Text>
             </Stack>
-          </Stack>
-        </LinearGradient>
+          ))}
+        </Stack>
 
-        <Stack paddingHorizontal={20} paddingTop={24} gap={0}>
+        {/* CTA */}
+        <TouchableOpacity onPress={handleSubscribe} disabled={awaitingWebReturn} activeOpacity={0.85}
+          style={[styles.cta, { backgroundColor: C.primary, opacity: awaitingWebReturn ? 0.7 : 1 }]}
+        >
+          {awaitingWebReturn ? (
+            <Stack horizontal alignItems="center" gap={10}>
+              <ActivityIndicator color="#FFF" />
+              <Text variant="body" color="#FFF" fontWeight="800" style={{ fontSize: 17 }}>Checking subscription…</Text>
+            </Stack>
+          ) : (
+            <Text variant="body" color="#FFF" fontWeight="800" style={{ fontSize: 18 }}>{ctaLabel}</Text>
+          )}
+        </TouchableOpacity>
+        <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 12 }}>{footnote}</Text>
+        <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={8}>
+          <Feather name="lock" size={12} color={C.textMuted} />
+          <Text variant="caption" color={C.textMuted}>Secure payment via Stripe</Text>
+        </Stack>
 
-          {/* ── Web subscription plans (primary / always visible) ── */}
-          <Stack gap={12} marginBottom={24}>
-            {WEB_PLANS.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => !awaitingWebReturn && handleWebSubscribe(p.id)}
-                activeOpacity={0.85}
-                disabled={awaitingWebReturn}
+        {/* Apple In-App Purchase — only when RevenueCat is configured */}
+        {ENABLE_REVENUECAT && (
+          <Stack alignItems="center" gap={10} marginTop={22}>
+            {plan.rcPlan && (
+              <TouchableOpacity onPress={handleApplePurchase} disabled={rcBusy} activeOpacity={0.85}
+                style={[styles.appleBtn, { borderColor: C.border, backgroundColor: C.bgCard }]}
               >
-                <Stack
-                  borderRadius={18} padding={18}
-                  style={[
-                    styles.planCard,
-                    {
-                      borderColor: p.id === 'annual' ? C.primary : C.border,
-                      borderWidth: p.id === 'annual' ? 2 : 1,
-                      backgroundColor: p.id === 'annual' ? `${C.primary}10` : C.bgCard,
-                    },
-                  ]}
-                >
-                  <Stack horizontal alignItems="center" justifyContent="space-between">
-                    <Stack gap={3}>
-                      <Stack horizontal alignItems="center" gap={8}>
-                        <Text variant="body" color={C.textPrimary} fontWeight="800">{p.label}</Text>
-                        {p.badge && (
-                          <Stack
-                            backgroundColor={p.id === 'annual' ? C.primary : `${C.primary}25`}
-                            borderRadius={6} paddingHorizontal={8} paddingVertical={3}
-                          >
-                            <Text style={{ fontSize: 10, color: p.id === 'annual' ? '#FFF' : C.primary, fontWeight: '700', letterSpacing: 0.4 }}>
-                              {p.badge.toUpperCase()}
-                            </Text>
-                          </Stack>
-                        )}
-                      </Stack>
-                      <Text variant="caption" color={C.textMuted}>{p.period}</Text>
-                    </Stack>
-                    <Stack horizontal alignItems="center" gap={10}>
-                      <Stack alignItems="flex-end">
-                        <Text variant="title" color={p.id === 'annual' ? C.primary : C.textPrimary} fontWeight="800">
-                          {p.price}
-                        </Text>
-                      </Stack>
-                      <Stack
-                        width={32} height={32} borderRadius={16}
-                        alignItems="center" justifyContent="center"
-                        backgroundColor={`${C.primary}15`}
-                      >
-                        <Feather name="arrow-right" size={16} color={C.primary} />
-                      </Stack>
-                    </Stack>
-                  </Stack>
-
-                  {awaitingWebReturn && (
-                    <Stack
-                      position="absolute" top={0} left={0} right={0} bottom={0}
-                      borderRadius={18}
-                      alignItems="center" justifyContent="center"
-                      style={{ backgroundColor: `${C.bg}CC` }}
-                    >
-                      <Text variant="caption" color={C.primary} fontWeight="600">Checking subscription…</Text>
-                    </Stack>
-                  )}
-                </Stack>
+                {rcBusy
+                  ? <ActivityIndicator color={C.textPrimary} />
+                  : <Text variant="body" color={C.textPrimary} fontWeight="700">Pay with Apple instead</Text>}
               </TouchableOpacity>
-            ))}
-          </Stack>
-
-          {/* Stripe trust note */}
-          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginBottom={28}>
-            <Feather name="lock" size={13} color={C.textMuted} />
-            <Text variant="caption" color={C.textMuted} fontWeight="500">
-              Secure payment via Stripe
+            )}
+            <TouchableOpacity onPress={restore} activeOpacity={0.7}>
+              <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
+            </TouchableOpacity>
+            <Text variant="caption" color={C.textMuted} textAlign="center" style={{ lineHeight: 18, paddingHorizontal: 8 }}>
+              Apple purchases are charged to your Apple ID at confirmation. Subscriptions renew automatically unless
+              auto-renew is turned off at least 24 hours before the end of the current period.
             </Text>
           </Stack>
-
-          {/* Feature checklist */}
-          <Stack
-            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginBottom={24}
-            gap={14}
-            style={{ borderWidth: 1, borderColor: C.border }}
-          >
-            {FEATURES.map((feature) => (
-              <Stack key={feature} horizontal alignItems="center" gap={12}>
-                <Stack
-                  width={22} height={22} borderRadius={11}
-                  alignItems="center" justifyContent="center"
-                  backgroundColor={`${C.primary}20`}
-                >
-                  <Feather name="check" size={13} color={C.primary} />
-                </Stack>
-                <Text variant="bodySmall" color={C.textPrimary} fontWeight="500" style={{ flex: 1 }}>
-                  {feature}
-                </Text>
-              </Stack>
-            ))}
-          </Stack>
-
-          {/* ── RevenueCat / Apple IAP section (gated) ── */}
-          {ENABLE_REVENUECAT && (
-            <Stack gap={12} marginBottom={24}>
-              <Text variant="bodySmall" color={C.textSecondary} fontWeight="700" textAlign="center">
-                Or pay with Apple Pay
-              </Text>
-
-              {/* Annual RC card */}
-              <TouchableOpacity onPress={() => setRcPlan('yearly')} activeOpacity={0.85}>
-                <Stack
-                  borderRadius={18} padding={18}
-                  style={[styles.planCard, {
-                    borderColor: rcPlan === 'yearly' ? C.primary : C.border,
-                    borderWidth: rcPlan === 'yearly' ? 2 : 1,
-                    backgroundColor: rcPlan === 'yearly' ? `${C.primary}10` : C.bgCard,
-                  }]}
-                >
-                  <Stack horizontal alignItems="center" justifyContent="space-between">
-                    <Stack gap={3}>
-                      <Stack horizontal alignItems="center" gap={10}>
-                        <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
-                        <Stack backgroundColor={C.primary} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
-                          <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>MOST POPULAR</Text>
-                        </Stack>
-                      </Stack>
-                      <Text variant="caption" color={C.textMuted}>£3.33/mo · billed annually</Text>
-                    </Stack>
-                    <Stack alignItems="flex-end" gap={2}>
-                      <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
-                      <Text variant="caption" color="#22C55E" fontWeight="600">Save 33%</Text>
-                    </Stack>
-                  </Stack>
-                  <Stack position="absolute" top={18} right={16}>
-                    <Stack
-                      width={22} height={22} borderRadius={11}
-                      alignItems="center" justifyContent="center"
-                      backgroundColor={rcPlan === 'yearly' ? C.primary : 'transparent'}
-                      style={{ borderWidth: 2, borderColor: rcPlan === 'yearly' ? C.primary : C.border }}
-                    >
-                      {rcPlan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
-                    </Stack>
-                  </Stack>
-                </Stack>
-              </TouchableOpacity>
-
-              {/* Monthly RC card */}
-              <TouchableOpacity onPress={() => setRcPlan('monthly')} activeOpacity={0.85}>
-                <Stack
-                  borderRadius={18} padding={18}
-                  style={[styles.planCard, {
-                    borderColor: rcPlan === 'monthly' ? C.primary : C.border,
-                    borderWidth: rcPlan === 'monthly' ? 2 : 1,
-                    backgroundColor: rcPlan === 'monthly' ? `${C.primary}10` : C.bgCard,
-                  }]}
-                >
-                  <Stack horizontal alignItems="center" justifyContent="space-between">
-                    <Stack gap={3}>
-                      <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
-                      <Text variant="caption" color={C.textMuted}>Billed monthly</Text>
-                    </Stack>
-                    <Stack alignItems="flex-end" gap={2}>
-                      <Text variant="title" color={C.textPrimary} fontWeight="800">£4.99</Text>
-                      <Text variant="caption" color={C.textMuted}>per month</Text>
-                    </Stack>
-                  </Stack>
-                  <Stack position="absolute" top={18} right={16}>
-                    <Stack
-                      width={22} height={22} borderRadius={11}
-                      alignItems="center" justifyContent="center"
-                      backgroundColor={rcPlan === 'monthly' ? C.primary : 'transparent'}
-                      style={{ borderWidth: 2, borderColor: rcPlan === 'monthly' ? C.primary : C.border }}
-                    >
-                      {rcPlan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
-                    </Stack>
-                  </Stack>
-                </Stack>
-              </TouchableOpacity>
-
-              {/* RC CTA */}
-              <TouchableOpacity
-                onPress={handleRcPurchase}
-                disabled={loading}
-                activeOpacity={0.85}
-                style={[styles.ctaBtn, { backgroundColor: C.primary }]}
-              >
-                <Text variant="body" color="#FFF" fontWeight="800">
-                  Start Free 7-Day Trial →
-                </Text>
-              </TouchableOpacity>
-              <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 6 }}>
-                {rcPlan === 'yearly' ? '£39.99/year after trial · ' : '£4.99/month after trial · '}
-                Cancel anytime
-              </Text>
-
-              {/* Restore — only with RevenueCat */}
-              <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 4 }}>
-                <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
-              </TouchableOpacity>
-
-              {/* Apple legal copy */}
-              <Text
-                variant="caption"
-                color={C.textMuted}
-                textAlign="center"
-                style={{ marginTop: 12, lineHeight: 18, paddingHorizontal: 8 }}
-              >
-                Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically
-                renews unless auto-renew is turned off at least 24 hours before the end of the current period.
-              </Text>
-            </Stack>
-          )}
-        </Stack>
+        )}
       </ScrollView>
     </StyledPage>
   )
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 52, right: 20,
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    zIndex: 10,
-  },
-  planCard: {
-    position: 'relative',
-  },
-  ctaBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: '#14B8A6',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
   backBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginTop: 8,
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cta: {
+    borderRadius: 18,
+    paddingVertical: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appleBtn: {
+    alignSelf: 'stretch',
+    borderRadius: 16, borderWidth: 1,
+    paddingVertical: 15,
+    alignItems: 'center',
   },
 })

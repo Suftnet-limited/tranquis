@@ -82,15 +82,18 @@ export function usePremium() {
     toastService.info('Identity reset', 'Fresh anonymous RevenueCat user.')
   }, [refresh])
 
-  const refreshFromWeb = useCallback(async (): Promise<void> => {
-    if (!accessToken) return
+  /** Pulls Pro status from the backend after web checkout. Resolves true once the user is Pro. */
+  const refreshFromWeb = useCallback(async (): Promise<boolean> => {
+    if (!accessToken) return false
     try {
-      const status = await fetchWebSubscriptionStatus(accessToken)
+      const status = await fetchWebSubscriptionStatus()
       if (status.is_pro) {
         setEntitlement(true, (status.plan_name as any) ?? 'monthly')
       }
+      return status.is_pro
     } catch (err: any) {
       if (__DEV__) console.log('[Premium] refreshFromWeb failed:', err?.message)
+      return false
     }
   }, [accessToken, setEntitlement])
 

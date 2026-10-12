@@ -23,7 +23,7 @@ import { Platform, Linking } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import Purchases, { type CustomerInfo } from 'react-native-purchases'
 import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT, WEB_SUBSCRIBE_URL, ENABLE_REVENUECAT } from '../constants/premium'
-import { API_BASE } from './api'
+import { api } from './api'
 
 // ─── RevenueCat API keys ──────────────────────────────────────────────────────
 // A RevenueCat key is tied to one store — an "appl_" key only authenticates
@@ -319,10 +319,7 @@ export interface WebSubscriptionStatus {
   plan_name: string | null
 }
 
-export async function fetchWebSubscriptionStatus(authToken: string): Promise<WebSubscriptionStatus> {
-  const res = await fetch(`${API_BASE}/api/v1/tranquis/subscription/status`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  })
-  if (!res.ok) throw new Error('Failed to fetch subscription status')
-  return res.json()
+// Goes through the API client so an access token that expired during checkout is refreshed
+export async function fetchWebSubscriptionStatus(): Promise<WebSubscriptionStatus> {
+  return api.get<WebSubscriptionStatus>('/api/v1/tranquis/subscription/status')
 }

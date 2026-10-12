@@ -44,7 +44,7 @@ export const PREMIUM_ENTITLEMENT_ID = 'premium'
 export const PREMIUM_SHARED_TEST_PROJECT = false
 export const PREMIUM_STORAGE_KEY = 'tranquis_premium_entitlement'
 
-export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? 'https://learnify-lfhf.onrender.com/subscribe/tranquis'
+export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? 'https://edquis.com/subscribe/tranquis'
 
 // Set to true only when RevenueCat keys are configured and IAP is ready for release
 export const ENABLE_REVENUECAT = process.env.EXPO_PUBLIC_ENABLE_REVENUECAT === 'true'

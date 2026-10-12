@@ -1,251 +1,364 @@
-import React, { useState } from 'react'
-import { Platform } from 'react-native'
-import Svg, { Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
-import { StyledPage, StyledScrollView, Stack, StyledPressable } from 'fluent-styles'
+import React, { useEffect, useRef, useState } from 'react'
+import { AppState, Platform, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import { router } from 'expo-router'
+import { Feather } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
 import { Text } from '../src/components/Text'
-import { GradientButton } from '../src/components/AuthUI'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
-import { router } from 'expo-router'
-import { goBack } from '../src/utils'
-import { ChevronLeftIcon, CheckIcon, GlobeIcon } from '../src/icons'
 
 type Plan = 'yearly' | 'monthly'
 
-// Shown until the App Store prices load (or if RevenueCat isn't configured)
-const FALLBACK = { monthly: '£4.99', yearly: '£39.99', yearlyPerMonth: '£3.33', saving: 'Save 33%' }
-
-// Only what Tranquis actually does today
 const FEATURES = [
-  'Unlimited text, voice & camera translations',
-  'Tone-aware translations — casual, formal, business, travel',
-  'Explain any translation — word choices & grammar',
-  'Pronunciation guides for every saved phrase',
-  'Natural speech playback in 35+ languages',
-  'Unlimited phrasebook saves',
+  'Unlimited translations — no daily limits',
+  'Live voice interpreter in real time',
+  'Camera & OCR translation',
+  'Text-to-speech playback',
+  'Unlimited phrasebook',
+  '20+ languages including rare & regional',
 ]
-
-// Teal-to-indigo medallion with soft halo rings
-function Medallion() {
-  const C = useColors()
-  const size = 92
-  return (
-    <Stack alignItems="center" justifyContent="center" width={size + 48} height={size + 48} alignSelf="center">
-      <Stack position="absolute" width={size + 48} height={size + 48} borderRadius={(size + 48) / 2}
-        borderWidth={1} borderColor={`${C.primary}22`} />
-      <Stack position="absolute" width={size + 22} height={size + 22} borderRadius={(size + 22) / 2}
-        borderWidth={1.5} borderColor={`${C.primary}40`} />
-      <Stack width={size} height={size} borderRadius={size / 2} alignItems="center" justifyContent="center"
-        style={{ shadowColor: C.sumColor, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}
-      >
-        <Svg width={size} height={size} style={{ position: 'absolute' }}>
-          <Defs>
-            <LinearGradient id="proMedallion" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor={C.primary} />
-              <Stop offset="1" stopColor={C.sumColor} />
-            </LinearGradient>
-          </Defs>
-          <Circle cx={size / 2} cy={size / 2} r={size / 2} fill="url(#proMedallion)" />
-        </Svg>
-        <GlobeIcon size={44} strokeWidth={1.6} color={C.white} />
-      </Stack>
-    </Stack>
-  )
-}
-
-function Header() {
-  const C = useColors()
-  return (
-    <StyledPage.Header.Full>
-      <Stack horizontal alignItems="center" gap={14} marginHorizontal={16} paddingBottom={14}>
-        <StyledPressable
-          width={44} height={44} borderRadius={12} alignItems="center" justifyContent="center"
-          backgroundColor={C.bgInput} onPress={() => goBack('/profile')}
-          accessibilityRole="button" accessibilityLabel="Close"
-        >
-          <ChevronLeftIcon size={20} strokeWidth={2.4} color={C.textPrimary} />
-        </StyledPressable>
-        <Stack flex={1}>
-          <Text variant="title" color={C.textPrimary} fontWeight="800">Tranquis Pro</Text>
-          <Text variant="bodySmall" color={C.textMuted}>Unlock everything</Text>
-        </Stack>
-      </Stack>
-    </StyledPage.Header.Full>
-  )
-}
-
-function FeatureList() {
-  const C = useColors()
-  return (
-    <Stack gap={14}>
-      {FEATURES.map((feature) => (
-        <Stack key={feature} horizontal alignItems="flex-start" gap={12}>
-          <Stack width={22} height={22} borderRadius={11} alignItems="center" justifyContent="center"
-            backgroundColor={C.primaryBg} style={{ marginTop: 1 }}
-          >
-            <CheckIcon size={13} strokeWidth={2.8} color={C.primary} />
-          </Stack>
-          <Text variant="body" color={C.textPrimary} style={{ flex: 1, fontSize: 15, lineHeight: 22 }}>{feature}</Text>
-        </Stack>
-      ))}
-    </Stack>
-  )
-}
-
-function PlanCard({ title, subtitle, price, per, note, saving, popular, selected, onPress }: {
-  title: string; subtitle: string; price: string; per: string; note?: string; saving?: string
-  popular?: boolean; selected: boolean; onPress: () => void
-}) {
-  const C = useColors()
-  return (
-    <StyledPressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={title}>
-      <Stack borderRadius={18} paddingHorizontal={18} paddingVertical={18}
-        backgroundColor={selected ? C.primaryBg : C.bgCard}
-        borderWidth={2} borderColor={selected ? C.primary : C.border}
-        style={selected ? { shadowColor: C.primary, shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 } : undefined}
-      >
-        {popular && (
-          <Stack position="absolute" top={-13} alignSelf="center" backgroundColor={C.accent} borderRadius={12}
-            paddingHorizontal={12} paddingVertical={4}
-          >
-            <Text variant="caption" color={C.white} fontWeight="800" style={{ letterSpacing: 0.8, fontSize: 11 }}>MOST POPULAR</Text>
-          </Stack>
-        )}
-        <Stack horizontal alignItems="center" justifyContent="space-between" gap={12}>
-          <Stack flex={1} gap={3}>
-            <Text variant="subtitle" color={C.textPrimary} fontWeight="800">{title}</Text>
-            <Text variant="bodySmall" color={C.textMuted}>{subtitle}</Text>
-          </Stack>
-          <Stack alignItems="flex-end" gap={2}>
-            <Text color={C.textPrimary} fontWeight="800" style={{ fontSize: 24 }}>
-              {price}<Text variant="bodySmall" color={C.textMuted} fontWeight="500">{per}</Text>
-            </Text>
-            {!!note && <Text variant="caption" color={C.textMuted}>{note}</Text>}
-            {!!saving && (
-              <Stack backgroundColor={C.successBg} borderRadius={10} paddingHorizontal={8} paddingVertical={2} marginTop={2}>
-                <Text variant="caption" color={C.success} fontWeight="700">{saving}</Text>
-              </Stack>
-            )}
-          </Stack>
-        </Stack>
-      </Stack>
-    </StyledPressable>
-  )
-}
 
 export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const { isPremium, plan: activePlan, buyMonthly, buyYearly, restore, loading, monthlyPrice, yearlyPrice } = usePremium()
+  const [loading, setLoading] = useState(false)
+  const { isPremium, buyMonthly, buyYearly, restore, openWebSubscribe, refreshFromWeb } = usePremium()
+
   const [plan, setPlan] = useState<Plan>('yearly')
+  const [awaitingWebReturn, setAwaitingWebReturn] = useState(false)
+  const appStateRef = useRef(AppState.currentState)
 
-  const monthly = monthlyPrice ?? FALLBACK.monthly
-  const yearly  = yearlyPrice ?? FALLBACK.yearly
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingWebReturn) {
+        setAwaitingWebReturn(false)
+        try {
+          await refreshFromWeb()
+        } catch {
+          // silent
+        }
+      }
+      appStateRef.current = nextState
+    })
+    return () => sub.remove()
+  }, [awaitingWebReturn, refreshFromWeb])
 
-  const page = (children: React.ReactNode) => (
-    <StyledPage flex={1} backgroundColor={C.bgCard} showStatusBar
-      statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.bgCard : undefined}
-    >
-      <Header />
-      <StyledScrollView
-        style={{ borderTopWidth: 1, borderTopColor: C.border }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
-      >
-        {children}
-      </StyledScrollView>
-    </StyledPage>
-  )
+  const handleWebSubscribe = async () => {
+    setAwaitingWebReturn(true)
+    await openWebSubscribe()
+  }
+
+  const handlePurchase = () => {
+    if (plan === 'yearly') buyYearly()
+    else buyMonthly()
+  }
 
   if (isPremium) {
-    return page(
-      <>
-        <Medallion />
-        <Text variant="display" color={C.textPrimary} fontWeight="800" textAlign="center" style={{ fontSize: 28, lineHeight: 34, marginTop: 18 }}>
-          You're on Pro
-        </Text>
-        <Text variant="body" color={C.textMuted} textAlign="center" style={{ marginTop: 8, marginBottom: 28 }}>
-          {activePlan ? `Your ${activePlan} plan is active. ` : ''}Thanks for supporting Tranquis.
-        </Text>
-        <FeatureList />
-        <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 28, lineHeight: 18 }}>
-          Manage or cancel your subscription in Settings › Apple ID › Subscriptions.
-        </Text>
-      </>,
+    return (
+      <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+        statusBarStyle={isDark ? 'light-content' : 'dark-content'}
+      >
+        <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={16}>
+          <Text style={{ fontSize: 56 }}>🌍</Text>
+          <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
+            You're on Pro!
+          </Text>
+          <Text variant="body" color={C.textSecondary} textAlign="center">
+            Enjoy unlimited translations and all Pro features.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backBtn, { backgroundColor: C.primary }]}
+            activeOpacity={0.8}
+          >
+            <Text variant="body" color="#FFF" fontWeight="700">Go back</Text>
+          </TouchableOpacity>
+        </Stack>
+      </StyledPage>
     )
   }
 
-  return page(
-    <>
-      <Medallion />
-      <Text variant="display" color={C.textPrimary} fontWeight="800" textAlign="center" style={{ fontSize: 30, lineHeight: 36, marginTop: 16 }}>
-        Speak every language,{'\n'}anywhere
-      </Text>
-      <Text variant="body" color={C.textMuted} textAlign="center" style={{ fontSize: 16, lineHeight: 24, marginTop: 10, marginBottom: 30, paddingHorizontal: 8 }}>
-        Unlimited translations, voice and camera, explanations and pronunciation — all in one place.
-      </Text>
-
-      <Stack gap={16} marginBottom={28}>
-        <PlanCard
-          popular
-          title="Pro Annual"
-          subtitle="Billed annually · cancel anytime"
-          price={yearlyPrice ? yearly : FALLBACK.yearlyPerMonth}
-          per={yearlyPrice ? '/yr' : '/mo'}
-          note={yearlyPrice ? undefined : `${FALLBACK.yearly}/year`}
-          saving={FALLBACK.saving}
-          selected={plan === 'yearly'}
-          onPress={() => setPlan('yearly')}
-        />
-        <PlanCard
-          title="Pro Monthly"
-          subtitle="Billed monthly · cancel anytime"
-          price={monthly}
-          per="/mo"
-          note={`${monthly}/month`}
-          selected={plan === 'monthly'}
-          onPress={() => setPlan('monthly')}
-        />
-      </Stack>
-
-      <FeatureList />
-
-      <Stack marginTop={30}>
-        <GradientButton
-          label="Start Free 7-Day Trial"
-          loading={loading}
-          onPress={() => (plan === 'yearly' ? buyYearly() : buyMonthly())}
-        />
-      </Stack>
-      <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 12 }}>
-        Then {plan === 'yearly' ? `${yearly}/year` : `${monthly}/month`}. Cancel in Settings anytime before renewal.
-      </Text>
-
-      <StyledPressable onPress={restore} alignSelf="center" marginTop={16} padding={6}
-        accessibilityRole="button" accessibilityLabel="Restore purchases"
+  return (
+    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
+      statusBarStyle="light-content"
+      statusBarBackgroundColor={Platform.OS === 'android' ? '#0A1628' : undefined}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 48 }}
       >
-        <Text variant="bodySmall" color={C.primary} fontWeight="700">Restore purchases</Text>
-      </StyledPressable>
-
-      <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 18, lineHeight: 17, paddingHorizontal: 8, opacity: 0.8 }}>
-        Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically
-        unless auto-renew is turned off at least 24 hours before the end of the current period.
-      </Text>
-
-      <Stack horizontal alignItems="center" justifyContent="center" gap={8} marginTop={14}>
-        <StyledPressable onPress={() => router.push('/terms' as any)} padding={4}
-          accessibilityRole="link" accessibilityLabel="Terms of Use"
+        {/* Hero gradient — dark blue */}
+        <LinearGradient
+          colors={['#0A1628', '#0F2040', '#112236']}
+          style={styles.hero}
         >
-          <Text variant="caption" color={C.primary} fontWeight="700">Terms of Use</Text>
-        </StyledPressable>
-        <Text variant="caption" color={C.textMuted}>·</Text>
-        <StyledPressable onPress={() => router.push('/privacy' as any)} padding={4}
-          accessibilityRole="link" accessibilityLabel="Privacy Policy"
-        >
-          <Text variant="caption" color={C.primary} fontWeight="700">Privacy Policy</Text>
-        </StyledPressable>
-      </Stack>
-    </>,
+          {/* Close */}
+          <StyledPressable onPress={() => router.back()}
+            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.12)' }]}
+          >
+            <Feather name="x" size={20} color="#FFF" />
+          </StyledPressable>
+
+          {/* Globe emoji hero */}
+          <Stack alignItems="center" gap={16} paddingTop={48} paddingBottom={36}>
+            <Text style={{ fontSize: 72 }}>🌍</Text>
+            <Stack alignItems="center" gap={8}>
+              <Text
+                variant="header"
+                fontWeight="800"
+                textAlign="center"
+                style={{ color: '#FFF', fontSize: 26, lineHeight: 34 }}
+              >
+                Speak every language,{'\n'}anywhere
+              </Text>
+              <Text variant="body" textAlign="center" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Unlock the full Tranquis experience
+              </Text>
+            </Stack>
+          </Stack>
+        </LinearGradient>
+
+        <Stack paddingHorizontal={20} paddingTop={24} gap={0}>
+
+          {/* Plan selector */}
+          <Stack gap={12} marginBottom={24}>
+            {/* Annual — first, with MOST POPULAR badge */}
+            <TouchableOpacity
+              onPress={() => setPlan('yearly')}
+              activeOpacity={0.85}
+            >
+              <Stack
+                borderRadius={18} padding={18}
+                style={[
+                  styles.planCard,
+                  {
+                    borderColor: plan === 'yearly' ? C.primary : C.border,
+                    borderWidth: plan === 'yearly' ? 2 : 1,
+                    backgroundColor: plan === 'yearly' ? `${C.primary}10` : C.bgCard,
+                  },
+                ]}
+              >
+                <Stack horizontal alignItems="center" justifyContent="space-between">
+                  <Stack gap={3}>
+                    <Stack horizontal alignItems="center" gap={10}>
+                      <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Annual</Text>
+                      {/* MOST POPULAR badge */}
+                      <Stack
+                        backgroundColor={C.primary} borderRadius={6}
+                        paddingHorizontal={8} paddingVertical={3}
+                      >
+                        <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>
+                          MOST POPULAR
+                        </Text>
+                      </Stack>
+                    </Stack>
+                    <Text variant="caption" color={C.textMuted}>£3.33/mo · billed annually</Text>
+                  </Stack>
+                  <Stack alignItems="flex-end" gap={2}>
+                    <Text variant="title" color={C.primary} fontWeight="800">£39.99</Text>
+                    <Text variant="caption" color="#22C55E" fontWeight="600">Save 33%</Text>
+                  </Stack>
+                </Stack>
+                {/* Radio */}
+                <Stack position="absolute" top={18} right={16}>
+                  <Stack
+                    width={22} height={22} borderRadius={11}
+                    alignItems="center" justifyContent="center"
+                    backgroundColor={plan === 'yearly' ? C.primary : 'transparent'}
+                    style={{ borderWidth: 2, borderColor: plan === 'yearly' ? C.primary : C.border }}
+                  >
+                    {plan === 'yearly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                  </Stack>
+                </Stack>
+              </Stack>
+            </TouchableOpacity>
+
+            {/* Monthly */}
+            <TouchableOpacity
+              onPress={() => setPlan('monthly')}
+              activeOpacity={0.85}
+            >
+              <Stack
+                borderRadius={18} padding={18}
+                style={[
+                  styles.planCard,
+                  {
+                    borderColor: plan === 'monthly' ? C.primary : C.border,
+                    borderWidth: plan === 'monthly' ? 2 : 1,
+                    backgroundColor: plan === 'monthly' ? `${C.primary}10` : C.bgCard,
+                  },
+                ]}
+              >
+                <Stack horizontal alignItems="center" justifyContent="space-between">
+                  <Stack gap={3}>
+                    <Text variant="body" color={C.textPrimary} fontWeight="800">Pro Monthly</Text>
+                    <Text variant="caption" color={C.textMuted}>Billed monthly</Text>
+                  </Stack>
+                  <Stack alignItems="flex-end" gap={2}>
+                    <Text variant="title" color={C.textPrimary} fontWeight="800">£4.99</Text>
+                    <Text variant="caption" color={C.textMuted}>per month</Text>
+                  </Stack>
+                </Stack>
+                <Stack position="absolute" top={18} right={16}>
+                  <Stack
+                    width={22} height={22} borderRadius={11}
+                    alignItems="center" justifyContent="center"
+                    backgroundColor={plan === 'monthly' ? C.primary : 'transparent'}
+                    style={{ borderWidth: 2, borderColor: plan === 'monthly' ? C.primary : C.border }}
+                  >
+                    {plan === 'monthly' && <Stack width={8} height={8} borderRadius={4} backgroundColor="#FFF" />}
+                  </Stack>
+                </Stack>
+              </Stack>
+            </TouchableOpacity>
+          </Stack>
+
+          {/* Feature checklist */}
+          <Stack
+            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginBottom={24}
+            gap={14}
+            style={{ borderWidth: 1, borderColor: C.border }}
+          >
+            {FEATURES.map((feature) => (
+              <Stack key={feature} horizontal alignItems="center" gap={12}>
+                <Stack
+                  width={22} height={22} borderRadius={11}
+                  alignItems="center" justifyContent="center"
+                  backgroundColor={`${C.primary}20`}
+                >
+                  <Feather name="check" size={13} color={C.primary} />
+                </Stack>
+                <Text variant="bodySmall" color={C.textPrimary} fontWeight="500" style={{ flex: 1 }}>
+                  {feature}
+                </Text>
+              </Stack>
+            ))}
+          </Stack>
+
+          {/* CTA button */}
+          <TouchableOpacity
+            onPress={handlePurchase}
+            disabled={loading}
+            activeOpacity={0.85}
+            style={[styles.ctaBtn, { backgroundColor: C.primary }]}
+          >
+            <Text variant="body" color="#FFF" fontWeight="800">
+              Start Free 7-Day Trial →
+            </Text>
+          </TouchableOpacity>
+          <Text
+            variant="caption"
+            color={C.textMuted}
+            textAlign="center"
+            style={{ marginTop: 10, marginBottom: 6 }}
+          >
+            {plan === 'yearly' ? '£39.99/year after trial · ' : '£4.99/month after trial · '}
+            Cancel anytime
+          </Text>
+
+          {/* Restore */}
+          <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 8 }}>
+            <Text variant="caption" color={C.textMuted} fontWeight="600">Restore purchases</Text>
+          </TouchableOpacity>
+
+          {/* Web subscribe option */}
+          <Stack
+            backgroundColor={C.bgCard} borderRadius={18} padding={18} marginTop={24}
+            gap={12}
+            style={{ borderWidth: 1, borderColor: C.border }}
+          >
+            <Stack gap={4}>
+              <Text variant="bodySmall" color={C.textSecondary} fontWeight="700" textAlign="center">
+                Or subscribe via web
+              </Text>
+              <Text variant="caption" color={C.textMuted} textAlign="center">
+                Weekly, monthly, 3-month, or annual plans
+              </Text>
+            </Stack>
+
+            {awaitingWebReturn ? (
+              <Stack
+                borderRadius={14} paddingVertical={14}
+                alignItems="center"
+                style={{ backgroundColor: `${C.primary}18` }}
+              >
+                <Text variant="caption" color={C.primary} fontWeight="600">
+                  Checking subscription…
+                </Text>
+              </Stack>
+            ) : (
+              <TouchableOpacity
+                style={[styles.webBtn, { borderColor: C.primary }]}
+                onPress={handleWebSubscribe}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Feather name="external-link" size={15} color={C.primary} style={{ marginRight: 8 }} />
+                <Text variant="bodySmall" color={C.primary} fontWeight="700">
+                  Open Web Checkout
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <Text variant="caption" color={C.textMuted} textAlign="center">
+              Opens in your browser. Return to the app when done.
+            </Text>
+          </Stack>
+
+          {/* Legal */}
+          <Text
+            variant="caption"
+            color={C.textMuted}
+            textAlign="center"
+            style={{ marginTop: 20, lineHeight: 18, paddingHorizontal: 8 }}
+          >
+            Payment charged to your Apple ID account at confirmation of purchase. Subscription automatically
+            renews unless auto-renew is turned off at least 24 hours before the end of the current period.
+          </Text>
+        </Stack>
+      </ScrollView>
+    </StyledPage>
   )
 }
+
+const styles = StyleSheet.create({
+  hero: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 52, right: 20,
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
+  },
+  planCard: {
+    position: 'relative',
+  },
+  ctaBtn: {
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: '#14B8A6',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  backBtn: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  webBtn: {
+    borderRadius: 14,
+    paddingVertical: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+})

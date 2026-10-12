@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toastService, loaderService } from 'fluent-styles'
-import { usePremiumStore } from '../stores'
+import { usePremiumStore, useAuthStore } from '../stores'
 import {
   purchaseMonthly, purchaseYearly,
   restorePurchases, getEntitlement, getPremiumPrices,
   resetPremiumForTesting,
+  openWebSubscribe as serviceOpenWebSubscribe,
+  fetchWebSubscriptionStatus,
 } from '../services/premiumService'
 
 export function usePremium() {
   const { isPremium, plan, hydrated, setEntitlement } = usePremiumStore()
-  const [loading, setLoading] = useState(false)
+  const { accessToken, user } = useAuthStore()
   const [prices, setPrices] = useState({
     monthlyPrice:  null as string | null,
     yearlyPrice:   null as string | null,
@@ -31,7 +33,6 @@ export function usePremium() {
   }, [])
 
   const buy = useCallback(async (purchaseFn: () => Promise<boolean>) => {
-    setLoading(true)
     try {
       const activated = await purchaseFn()
       await refresh()
@@ -44,8 +45,6 @@ export function usePremium() {
     } catch (err: any) {
       toastService.error('Purchase failed', err?.message)
       return false
-    } finally {
-      setLoading(false)
     }
   }, [refresh])
 
@@ -53,7 +52,6 @@ export function usePremium() {
   const buyYearly  = useCallback(() => buy(purchaseYearly),  [buy])
 
   const restore = useCallback(async () => {
-    setLoading(true)
     try {
       const restored = await loaderService.wrap(restorePurchases, { label: 'Restoring…', variant: 'spinner' })
       if (restored) {
@@ -66,21 +64,41 @@ export function usePremium() {
     } catch (err: any) {
       toastService.error('Restore failed', err?.message)
       return false
-    } finally {
-      setLoading(false)
     }
   }, [refresh])
 
   const resetForTesting = useCallback(async () => {
-    setLoading(true)
-    try {
-      await resetPremiumForTesting()
-      await refresh()
-      toastService.info('Identity reset', 'Fresh anonymous RevenueCat user.')
-    } finally {
-      setLoading(false)
-    }
+    await resetPremiumForTesting()
+    await refresh()
+    toastService.info('Identity reset', 'Fresh anonymous RevenueCat user.')
   }, [refresh])
+
+  const refreshFromWeb = useCallback(async (): Promise<void> => {
+    if (!accessToken) return
+    try {
+      const status = await fetchWebSubscriptionStatus(accessToken)
+      if (status.is_pro) {
+        setEntitlement(true, (status.plan_name as any) ?? 'monthly')
+      }
+    } catch (err: any) {
+      if (__DEV__) console.log('[Premium] refreshFromWeb failed:', err?.message)
+    }
+  }, [accessToken, setEntitlement])
+
+  const openWebSubscribe = useCallback(async (
+    plan?: 'weekly' | 'monthly' | 'quarterly' | 'annual',
+  ): Promise<void> => {
+    const userId = user?.id
+    if (!userId) {
+      toastService.error('Sign in required', 'Please sign in to subscribe.')
+      return
+    }
+    try {
+      await serviceOpenWebSubscribe(userId, plan)
+    } catch (err: any) {
+      toastService.error('Could not open browser', err?.message)
+    }
+  }, [user?.id])
 
   return {
     isPremium,
@@ -90,7 +108,8 @@ export function usePremium() {
     buyYearly,
     restore,
     resetForTesting,
-    loading,
+    refreshFromWeb,
+    openWebSubscribe,
     monthlyPrice:  prices.monthlyPrice,
     yearlyPrice:   prices.yearlyPrice,
   }

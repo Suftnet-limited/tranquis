@@ -50,5 +50,5 @@ export const PREMIUM_STORAGE_KEY = 'tranquis_premium_entitlement'
 // webhook set is_pro, which /api/v1/tranquis/subscription/status then reports back to the app
 export const WEB_SUBSCRIBE_URL = process.env.EXPO_PUBLIC_WEB_SUBSCRIBE_URL ?? `${API_BASE}/tranquis/subscribe`
 
-// RevenueCat / Apple IAP is the primary purchase flow
-export const ENABLE_REVENUECAT = process.env.EXPO_PUBLIC_ENABLE_REVENUECAT !== 'false'
+// RevenueCat / Apple IAP — enable only when RC keys and App Store products are configured
+export const ENABLE_REVENUECAT = process.env.EXPO_PUBLIC_ENABLE_REVENUECAT === 'true'

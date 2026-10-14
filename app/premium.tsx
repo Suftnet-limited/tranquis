@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Platform,
   TouchableOpacity,
@@ -7,6 +7,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native'
+import { AppState } from 'react-native'
 import { router } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { StyledPage, Stack } from 'fluent-styles'
@@ -28,24 +29,39 @@ const FEATURES = [
 export default function PremiumScreen() {
   const C      = useColors()
   const isDark = useIsDark()
-  const [selected, setSelected] = useState<Plan>('monthly')
-  const [loading, setLoading]   = useState(false)
-  const { isPremium, buyMonthly, buyYearly, restore } = usePremium()
+  const [selected, setSelected]           = useState<Plan>('monthly')
+  const [loading, setLoading]             = useState(false)
+  const [awaitingReturn, setAwaitingReturn] = useState(false)
+  const appStateRef = useRef(AppState.currentState)
+
+  const { isPremium, openWebSubscribe, refreshFromWeb } = usePremium()
 
   const TEAL   = '#3DBFA0'
-  const TEAL_L = '#E8F8F5'
-  const BG     = isDark ? C.bg   : '#FFFFFF'
+  const TEAL_L = isDark ? '#0D2E29' : '#E8F8F5'
+  const BG     = isDark ? C.bg : '#FFFFFF'
   const CARD   = isDark ? C.bgCard : '#FFFFFF'
   const BORDER = isDark ? C.border : '#E5E7EB'
 
+  // When app returns to foreground after web checkout, refresh pro status
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (appStateRef.current.match(/background|inactive/) && nextState === 'active' && awaitingReturn) {
+        setAwaitingReturn(false)
+        setLoading(false)
+        try { await refreshFromWeb() } catch { /* silent */ }
+      }
+      appStateRef.current = nextState
+    })
+    return () => sub.remove()
+  }, [awaitingReturn, refreshFromWeb])
+
   const handleSubscribe = async () => {
     setLoading(true)
-    try {
-      if (selected === 'annual') await buyYearly()
-      else await buyMonthly()
-    } finally {
-      setLoading(false)
-    }
+    setAwaitingReturn(true)
+    // Map the two mockshot plans to the Stripe plan IDs
+    const planId = selected === 'annual' ? 'annual' : 'monthly'
+    await openWebSubscribe(planId)
+    // loading stays true until app returns to foreground
   }
 
   if (isPremium) {
@@ -96,7 +112,6 @@ export default function PremiumScreen() {
             </Text>
             <Text variant="caption" color={C.textSecondary}>Unlock everything</Text>
           </Stack>
-          {/* spacer to centre title */}
           <View style={{ width: 36 }} />
         </Stack>
 
@@ -121,8 +136,7 @@ export default function PremiumScreen() {
 
             {/* Annual — Most Popular */}
             <View>
-              {/* Badge floated above card */}
-              <Stack alignItems="center" marginBottom={-12} zIndex={1}>
+              <Stack alignItems="center" marginBottom={-12} style={{ zIndex: 1 }}>
                 <Stack
                   backgroundColor="#6C63FF"
                   borderRadius={20} paddingHorizontal={16} paddingVertical={5}
@@ -137,13 +151,10 @@ export default function PremiumScreen() {
                 <Stack
                   borderRadius={16} padding={18} paddingTop={24}
                   backgroundColor={CARD}
-                  style={[
-                    styles.planCard,
-                    {
-                      borderColor: selected === 'annual' ? '#6C63FF' : BORDER,
-                      borderWidth: selected === 'annual' ? 2 : 1,
-                    },
-                  ]}
+                  style={[styles.planCard, {
+                    borderColor: selected === 'annual' ? '#6C63FF' : BORDER,
+                    borderWidth: selected === 'annual' ? 2 : 1,
+                  }]}
                 >
                   <Stack horizontal alignItems="center" justifyContent="space-between">
                     <Stack gap={4}>
@@ -160,7 +171,10 @@ export default function PremiumScreen() {
                         <Text variant="caption" color={C.textSecondary}>/mo</Text>
                       </Stack>
                       <Text variant="caption" color={C.textSecondary}>£39.99/year</Text>
-                      <Stack backgroundColor={isDark ? '#14532d' : '#DCFCE7'} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
+                      <Stack
+                        backgroundColor={isDark ? '#14532d' : '#DCFCE7'}
+                        borderRadius={6} paddingHorizontal={8} paddingVertical={3}
+                      >
                         <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>Save 33%</Text>
                       </Stack>
                     </Stack>
@@ -173,14 +187,11 @@ export default function PremiumScreen() {
             <TouchableOpacity onPress={() => setSelected('monthly')} activeOpacity={0.85}>
               <Stack
                 borderRadius={16} padding={18}
-                backgroundColor={selected === 'monthly' ? (isDark ? '#0D2E29' : TEAL_L) : CARD}
-                style={[
-                  styles.planCard,
-                  {
-                    borderColor: selected === 'monthly' ? TEAL : BORDER,
-                    borderWidth: selected === 'monthly' ? 2 : 1,
-                  },
-                ]}
+                backgroundColor={selected === 'monthly' ? TEAL_L : CARD}
+                style={[styles.planCard, {
+                  borderColor: selected === 'monthly' ? TEAL : BORDER,
+                  borderWidth: selected === 'monthly' ? 2 : 1,
+                }]}
               >
                 <Stack horizontal alignItems="center" justifyContent="space-between">
                   <Stack gap={4}>
@@ -234,19 +245,13 @@ export default function PremiumScreen() {
               : 'Then £39.99/year. Cancel in Settings anytime before renewal.'}
           </Text>
 
-          {/* Restore */}
-          <TouchableOpacity onPress={restore} activeOpacity={0.7} style={{ alignSelf: 'center', marginTop: 16 }}>
-            <Text variant="caption" color={C.textSecondary} fontWeight="600">Restore purchases</Text>
-          </TouchableOpacity>
-
-          {/* Apple legal */}
-          <Text
-            variant="caption" color={C.textSecondary} textAlign="center"
-            style={{ marginTop: 16, lineHeight: 18, paddingHorizontal: 8 }}
-          >
-            Payment charged to your Apple ID at confirmation. Subscription auto-renews unless
-            cancelled at least 24 hours before the end of the current period.
-          </Text>
+          {/* Stripe trust note */}
+          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={16}>
+            <Feather name="lock" size={13} color={C.textMuted} />
+            <Text variant="caption" color={C.textMuted} fontWeight="500">
+              Secure payment via Stripe
+            </Text>
+          </Stack>
 
         </Stack>
       </ScrollView>

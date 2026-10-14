@@ -23,8 +23,8 @@ type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 const FEATURES = [
   'Unlimited text, voice & camera translations',
   'Live voice interpreter (two-way, real-time)',
-  'Document translation — PDF & Word',
-  'Offline mode — 15 languages',
+  'Natural text-to-speech in your choice of voice',
+  '37 languages, including Nigerian languages',
   'Context & tone aware translations',
   'Unlimited phrasebook saves',
 ]
@@ -154,7 +154,7 @@ export default function PremiumScreen() {
               Speak every language,{'\n'}anywhere
             </Text>
             <Text variant="body" color={C.textSecondary} textAlign="center" style={{ lineHeight: 22 }}>
-              Unlimited translations, voice interpreter, document{'\n'}translate, and more.
+              Unlimited translations, voice interpreter,{'\n'}camera translate, and more.
             </Text>
           </Stack>
 

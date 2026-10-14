@@ -6,23 +6,29 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": false }
+      "ios": {
+        "simulator": false
+      }
     },
     "preview": {
       "distribution": "internal",
-      "ios": { "simulator": false },
+      "ios": {
+        "simulator": false
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com",
-        "EXPO_PUBLIC_SENTRY_DSN": "",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_uTINTUCixglWJhcHJbqnpjIMAil",
+        "EXPO_PUBLIC_ENABLE_REVENUECAT": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://careermind-backend-ky7e.onrender.com",
-        "EXPO_PUBLIC_SENTRY_DSN": "",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_RC_IOS_KEY": "appl_uTINTUCixglWJhcHJbqnpjIMAil",
+        "EXPO_PUBLIC_ENABLE_REVENUECAT": "true"
       }
     }
   },
@@ -30,7 +36,6 @@
     "production": {
       "ios": {
         "appleId": "kabelsus@gmail.com",
-        "ascAppId": "",
         "appleTeamId": "ZQADUF26X5"
       }
     }

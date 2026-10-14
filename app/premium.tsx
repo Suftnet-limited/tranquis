@@ -68,7 +68,7 @@ export default function PremiumScreen() {
         statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       >
         <Stack flex={1} alignItems="center" justifyContent="center" padding={32} gap={16}>
-          <Text style={{ fontSize: 56 }}>🌍</Text>
+          <Text style={{ fontSize: 56, lineHeight: 70 }}>🌍</Text>
           <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center">
             You're on Pro!
           </Text>
@@ -92,32 +92,34 @@ export default function PremiumScreen() {
       statusBarStyle={isDark ? 'light-content' : 'dark-content'}
       statusBarBackgroundColor={Platform.OS === 'android' ? BG : undefined}
     >
+      {/* ── Header bar — outside the ScrollView so it stays put; StyledPage already clears the status bar ── */}
+      <Stack
+        horizontal alignItems="center" gap={14} paddingHorizontal={20} paddingVertical={12}
+        style={{ borderBottomWidth: 1, borderBottomColor: BORDER }}
+      >
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} hitSlop={8}
+          style={[styles.backBtn, { backgroundColor: isDark ? C.bgInput : '#F3F4F6' }]}
+        >
+          <Feather name="chevron-left" size={22} color={isDark ? '#FFF' : '#111'} />
+        </TouchableOpacity>
+        <Stack gap={2}>
+          <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 18 }}>
+            Tranquis Pro
+          </Text>
+          <Text variant="caption" color={C.textSecondary}>Unlock everything</Text>
+        </Stack>
+      </Stack>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 48 }}
       >
-        {/* ── Header bar ── */}
-        <Stack
-          horizontal alignItems="center" paddingHorizontal={16} paddingTop={56} paddingBottom={12}
-          style={{ borderBottomWidth: 1, borderBottomColor: BORDER }}
-        >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-            <Feather name="chevron-left" size={22} color={isDark ? '#FFF' : '#111'} />
-          </TouchableOpacity>
-          <Stack flex={1} alignItems="center" gap={2}>
-            <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 17 }}>
-              Tranquis Pro
-            </Text>
-            <Text variant="caption" color={C.textSecondary}>Unlock everything</Text>
-          </Stack>
-          <View style={{ width: 36 }} />
-        </Stack>
 
         <Stack paddingHorizontal={20} paddingTop={28} gap={0}>
 
           {/* ── Globe hero ── */}
           <Stack alignItems="center" gap={14} marginBottom={28}>
-            <Text style={{ fontSize: 64 }}>🌍</Text>
+            <Text style={{ fontSize: 64, lineHeight: 80 }}>🌍</Text>
             <Text
               variant="header" fontWeight="800" textAlign="center" color={C.textPrimary}
               style={{ fontSize: 26, lineHeight: 34 }}
@@ -286,7 +288,7 @@ export default function PremiumScreen() {
 
 const styles = StyleSheet.create({
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
   planCard: {

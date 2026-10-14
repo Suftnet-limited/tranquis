@@ -173,6 +173,14 @@ function Corner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   )
 }
 
+// Each kind of text gets its own colour
+const SCAN_TYPES = [
+  { label: 'Menus',     color: TEAL },
+  { label: 'Signs',     color: PURPLE },
+  { label: 'Documents', color: '#D97706' },
+  { label: 'Labels',    color: '#DB2777' },
+]
+
 function CameraScene() {
   const A = useAuthColors()
   const scan = useLoop(2200)
@@ -200,7 +208,7 @@ function CameraScene() {
         </View>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 18 }}>
-        {['Menus', 'Signs', 'Documents', 'Labels'].map((l) => <Pill key={l} label={l} color={TEAL} filled />)}
+        {SCAN_TYPES.map(({ label, color }) => <Pill key={label} label={label} color={color} filled />)}
       </View>
     </View>
   )

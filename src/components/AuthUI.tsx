@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, Text as RNText, TextInput, TouchableOpacity, View, type TextInputProps } from 'react-native'
+import { ActivityIndicator, Image, Text as RNText, TextInput, TouchableOpacity, View, type TextInputProps } from 'react-native'
 import { EyeIcon, EyeOffIcon } from '../icons'
 import { useColors, useIsDark } from '../constants'
 
@@ -34,15 +34,15 @@ export function useAuthColors() {
   }
 }
 
-/** Globe tile + wordmark, then the screen heading and subtitle. */
+const LOGO = require('../../assets/logo.png')  // app icon at 3x of 44pt
+
+/** Tranquis logo + wordmark, then the screen heading and subtitle. */
 export function AuthHeader({ title, subtitle }: { title: string; subtitle: string }) {
   const A = useAuthColors()
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: TEAL, alignItems: 'center', justifyContent: 'center' }}>
-          <RNText style={{ fontSize: 22, lineHeight: 28 }}>🌍</RNText>
-        </View>
+        <Image source={LOGO} style={{ width: 44, height: 44 }} accessibilityIgnoresInvertColors accessible={false} />
         <RNText style={{ fontFamily: FONT.bold, fontSize: 18, color: A.text }}>Tranquis</RNText>
       </View>
       <RNText style={{ fontFamily: FONT.heading, fontSize: 30, lineHeight: 36, letterSpacing: -0.8, color: A.text }}>

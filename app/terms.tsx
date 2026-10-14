@@ -46,7 +46,7 @@ const SECTIONS = [
   },
   {
     title: 'Contact',
-    body: 'Questions about these terms: support@tranquis.com.',
+    body: 'Questions about these terms: support@suftnet.com.',
   },
 ]
 

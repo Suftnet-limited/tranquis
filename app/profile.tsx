@@ -198,7 +198,7 @@ export default function ProfileScreen() {
       logout()
       router.replace('/auth/login')
     } catch {
-      toastService.error('Error', 'Could not delete account. Please try again or contact support@tranquis.com')
+      toastService.error('Error', 'Could not delete account. Please try again or contact support@suftnet.com')
     }
   }
 

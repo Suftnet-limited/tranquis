@@ -51,7 +51,7 @@ export default function HelpScreen() {
       <ScreenHeader title="Help & Support" onBackPress={() => goBack('/profile')} />
 
       <StyledScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <StyledPressable onPress={() => Linking.openURL('mailto:support@tranquis.com')}
+        <StyledPressable onPress={() => Linking.openURL('mailto:support@suftnet.com')}
           accessibilityRole="button" accessibilityLabel="Email support"
         >
           <StyledCard backgroundColor={C.bgCard} borderRadius={16} padding={16} marginBottom={24}
@@ -63,7 +63,7 @@ export default function HelpScreen() {
               </Stack>
               <Stack flex={1}>
                 <Text variant="label" color={C.textPrimary} fontWeight="700">Email support</Text>
-                <Text variant="caption" color={C.textMuted}>support@tranquis.com</Text>
+                <Text variant="caption" color={C.textMuted}>support@suftnet.com</Text>
               </Stack>
               <ChevronRightIcon size={16} strokeWidth={2} color={C.textMuted} />
             </Stack>

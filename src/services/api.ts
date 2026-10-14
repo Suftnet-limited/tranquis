@@ -4,7 +4,8 @@ import { useAuthStore } from '../stores'
 // api.careermind.app has no DNS yet — fall back to the Render service
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://careermind-backend-ky7e.onrender.com'
 
-const NO_REFRESH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh', '/api/v1/auth/reset-password-instant']
+const NO_REFRESH_PATHS = ['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/refresh',
+  '/api/v1/tranquis/auth/reset-password/request', '/api/v1/tranquis/auth/reset-password/confirm']
 
 // No request may hang forever — a stalled network call would leave a spinner
 // running. Aborted requests surface as a readable error.

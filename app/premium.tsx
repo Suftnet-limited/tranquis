@@ -15,7 +15,7 @@ import { Text } from '../src/components/Text'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
 
-type Plan = 'annual' | 'monthly'
+type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 
 const FEATURES = [
   'Unlimited text, voice & camera translations',
@@ -58,9 +58,7 @@ export default function PremiumScreen() {
   const handleSubscribe = async () => {
     setLoading(true)
     setAwaitingReturn(true)
-    // Map the two mockshot plans to the Stripe plan IDs
-    const planId = selected === 'annual' ? 'annual' : 'monthly'
-    await openWebSubscribe(planId)
+    await openWebSubscribe(selected)
     // loading stays true until app returns to foreground
   }
 
@@ -137,33 +135,20 @@ export default function PremiumScreen() {
             {/* Annual — Most Popular */}
             <View>
               <Stack alignItems="center" marginBottom={-12} style={{ zIndex: 1 }}>
-                <Stack
-                  backgroundColor="#6C63FF"
-                  borderRadius={20} paddingHorizontal={16} paddingVertical={5}
-                >
+                <Stack backgroundColor="#6C63FF" borderRadius={20} paddingHorizontal={16} paddingVertical={5}>
                   <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '700', letterSpacing: 0.5 }}>
                     MOST POPULAR
                   </Text>
                 </Stack>
               </Stack>
-
               <TouchableOpacity onPress={() => setSelected('annual')} activeOpacity={0.85}>
-                <Stack
-                  borderRadius={16} padding={18} paddingTop={24}
-                  backgroundColor={CARD}
-                  style={[styles.planCard, {
-                    borderColor: selected === 'annual' ? '#6C63FF' : BORDER,
-                    borderWidth: selected === 'annual' ? 2 : 1,
-                  }]}
+                <Stack borderRadius={16} padding={18} paddingTop={24} backgroundColor={CARD}
+                  style={[styles.planCard, { borderColor: selected === 'annual' ? '#6C63FF' : BORDER, borderWidth: selected === 'annual' ? 2 : 1 }]}
                 >
                   <Stack horizontal alignItems="center" justifyContent="space-between">
                     <Stack gap={4}>
-                      <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>
-                        Pro Annual
-                      </Text>
-                      <Text variant="caption" color={C.textSecondary}>
-                        Billed annually · cancel anytime
-                      </Text>
+                      <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>Pro Annual</Text>
+                      <Text variant="caption" color={C.textSecondary}>Billed annually · cancel anytime</Text>
                     </Stack>
                     <Stack alignItems="flex-end" gap={2}>
                       <Stack horizontal alignItems="baseline" gap={2}>
@@ -171,10 +156,7 @@ export default function PremiumScreen() {
                         <Text variant="caption" color={C.textSecondary}>/mo</Text>
                       </Stack>
                       <Text variant="caption" color={C.textSecondary}>£39.99/year</Text>
-                      <Stack
-                        backgroundColor={isDark ? '#14532d' : '#DCFCE7'}
-                        borderRadius={6} paddingHorizontal={8} paddingVertical={3}
-                      >
+                      <Stack backgroundColor={isDark ? '#14532d' : '#DCFCE7'} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
                         <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>Save 33%</Text>
                       </Stack>
                     </Stack>
@@ -183,24 +165,21 @@ export default function PremiumScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Monthly */}
+            {/* Monthly — 7-day trial */}
             <TouchableOpacity onPress={() => setSelected('monthly')} activeOpacity={0.85}>
-              <Stack
-                borderRadius={16} padding={18}
+              <Stack borderRadius={16} padding={18}
                 backgroundColor={selected === 'monthly' ? TEAL_L : CARD}
-                style={[styles.planCard, {
-                  borderColor: selected === 'monthly' ? TEAL : BORDER,
-                  borderWidth: selected === 'monthly' ? 2 : 1,
-                }]}
+                style={[styles.planCard, { borderColor: selected === 'monthly' ? TEAL : BORDER, borderWidth: selected === 'monthly' ? 2 : 1 }]}
               >
                 <Stack horizontal alignItems="center" justifyContent="space-between">
                   <Stack gap={4}>
-                    <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>
-                      Pro Monthly
-                    </Text>
-                    <Text variant="caption" color={C.textSecondary}>
-                      Billed monthly · cancel anytime
-                    </Text>
+                    <Stack horizontal alignItems="center" gap={8}>
+                      <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>Pro Monthly</Text>
+                      <Stack backgroundColor={`${TEAL}25`} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
+                        <Text style={{ fontSize: 10, color: TEAL, fontWeight: '700' }}>7-DAY TRIAL</Text>
+                      </Stack>
+                    </Stack>
+                    <Text variant="caption" color={C.textSecondary}>Billed monthly · cancel anytime</Text>
                   </Stack>
                   <Stack alignItems="flex-end" gap={2}>
                     <Stack horizontal alignItems="baseline" gap={2}>
@@ -208,6 +187,48 @@ export default function PremiumScreen() {
                       <Text variant="caption" color={C.textSecondary}>/mo</Text>
                     </Stack>
                     <Text variant="caption" color={C.textSecondary}>£4.99/month</Text>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </TouchableOpacity>
+
+            {/* 3-Month */}
+            <TouchableOpacity onPress={() => setSelected('quarterly')} activeOpacity={0.85}>
+              <Stack borderRadius={16} padding={18}
+                backgroundColor={selected === 'quarterly' ? TEAL_L : CARD}
+                style={[styles.planCard, { borderColor: selected === 'quarterly' ? TEAL : BORDER, borderWidth: selected === 'quarterly' ? 2 : 1 }]}
+              >
+                <Stack horizontal alignItems="center" justifyContent="space-between">
+                  <Stack gap={4}>
+                    <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>3-Month</Text>
+                    <Text variant="caption" color={C.textSecondary}>Every 3 months · cancel anytime</Text>
+                  </Stack>
+                  <Stack alignItems="flex-end" gap={2}>
+                    <Stack horizontal alignItems="baseline" gap={2}>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£9.99</Text>
+                    </Stack>
+                    <Text variant="caption" color={C.textSecondary}>every 3 months</Text>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </TouchableOpacity>
+
+            {/* Weekly */}
+            <TouchableOpacity onPress={() => setSelected('weekly')} activeOpacity={0.85}>
+              <Stack borderRadius={16} padding={18}
+                backgroundColor={selected === 'weekly' ? TEAL_L : CARD}
+                style={[styles.planCard, { borderColor: selected === 'weekly' ? TEAL : BORDER, borderWidth: selected === 'weekly' ? 2 : 1 }]}
+              >
+                <Stack horizontal alignItems="center" justifyContent="space-between">
+                  <Stack gap={4}>
+                    <Text variant="body" color={C.textPrimary} fontWeight="800" style={{ fontSize: 16 }}>Weekly</Text>
+                    <Text variant="caption" color={C.textSecondary}>Billed weekly · cancel anytime</Text>
+                  </Stack>
+                  <Stack alignItems="flex-end" gap={2}>
+                    <Stack horizontal alignItems="baseline" gap={2}>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£1.99</Text>
+                    </Stack>
+                    <Text variant="caption" color={C.textSecondary}>per week</Text>
                   </Stack>
                 </Stack>
               </Stack>
@@ -234,15 +255,19 @@ export default function PremiumScreen() {
             {loading
               ? <ActivityIndicator color="#FFF" />
               : <Text variant="body" color="#FFF" fontWeight="800" style={{ fontSize: 17 }}>
-                  {selected === 'monthly' ? 'Start Free 7-Day Trial →' : 'Start Annual Plan →'}
+                  {selected === 'monthly' ? 'Start Free 7-Day Trial →'
+                    : selected === 'annual' ? 'Start Annual Plan →'
+                    : selected === 'quarterly' ? 'Start 3-Month Plan →'
+                    : 'Start Weekly Plan →'}
                 </Text>
             }
           </TouchableOpacity>
 
           <Text variant="caption" color={C.textSecondary} textAlign="center" style={{ marginTop: 10, lineHeight: 18 }}>
-            {selected === 'monthly'
-              ? 'Then £4.99/month. Cancel in Settings anytime before renewal.'
-              : 'Then £39.99/year. Cancel in Settings anytime before renewal.'}
+            {selected === 'monthly'   ? 'Then £4.99/month. Cancel in Settings anytime before renewal.'
+              : selected === 'annual'   ? 'Then £39.99/year. Cancel in Settings anytime before renewal.'
+              : selected === 'quarterly' ? '£9.99 every 3 months. Cancel anytime.'
+              : '£1.99/week. Cancel anytime.'}
           </Text>
 
           {/* Stripe trust note */}

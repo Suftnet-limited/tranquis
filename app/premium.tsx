@@ -10,11 +10,13 @@ import {
 import { AppState, Linking } from 'react-native'
 import { router } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
-import { StyledPage, Stack } from 'fluent-styles'
+import { StyledPage, Stack, toastService } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
 import { PRIVACY_URL, TERMS_URL } from '../src/constants/legal'
+import { ENABLE_REVENUECAT } from '../src/constants/premium'
+import type { PurchasesPackage } from 'react-native-purchases'
 
 type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 
@@ -35,7 +37,21 @@ export default function PremiumScreen() {
   const [awaitingReturn, setAwaitingReturn] = useState(false)
   const appStateRef = useRef(AppState.currentState)
 
-  const { isPremium, openWebSubscribe, refreshFromWeb } = usePremium()
+  const { isPremium, openWebSubscribe, refreshFromWeb, getOffering, buyPackage, restore } = usePremium()
+
+  // Apple In-App Purchase via RevenueCat when enabled; otherwise Stripe web checkout
+  const [packages, setPackages] = useState<Partial<Record<Plan, PurchasesPackage>>>({})
+  useEffect(() => {
+    if (ENABLE_REVENUECAT) getOffering().then(setPackages)
+  }, [getOffering])
+
+  // Live App Store prices when the offering has loaded, else the web checkout prices
+  const price = (plan: Plan, fallback: string) => packages[plan]?.product.priceString ?? fallback
+  const annualPerMonth = packages.annual?.product.pricePerMonthString ?? '£3.33'
+  const annualSaving = (() => {
+    const a = packages.annual?.product.price, m = packages.monthly?.product.price
+    return a && m ? `Save ${Math.round((1 - a / (m * 12)) * 100)}%` : 'Save 33%'
+  })()
 
   const TEAL   = '#3DBFA0'
   const TEAL_L = isDark ? '#0D2E29' : '#E8F8F5'
@@ -57,6 +73,16 @@ export default function PremiumScreen() {
   }, [awaitingReturn, refreshFromWeb])
 
   const handleSubscribe = async () => {
+    if (ENABLE_REVENUECAT) {
+      const pkg = packages[selected]
+      if (!pkg) {
+        toastService.error('Plan unavailable', 'This plan could not be loaded from the App Store. Please try again.')
+        return
+      }
+      setLoading(true)
+      try { await buyPackage(pkg) } finally { setLoading(false) }
+      return
+    }
     setLoading(true)
     setAwaitingReturn(true)
     await openWebSubscribe(selected)
@@ -155,12 +181,12 @@ export default function PremiumScreen() {
                     </Stack>
                     <Stack alignItems="flex-end" gap={2}>
                       <Stack horizontal alignItems="baseline" gap={2}>
-                        <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£3.33</Text>
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>{annualPerMonth}</Text>
                         <Text variant="caption" color={C.textSecondary}>/mo</Text>
                       </Stack>
-                      <Text variant="caption" color={C.textSecondary}>£39.99/year</Text>
+                      <Text variant="caption" color={C.textSecondary}>{price('annual', '£39.99')}/year</Text>
                       <Stack backgroundColor={isDark ? '#14532d' : '#DCFCE7'} borderRadius={6} paddingHorizontal={8} paddingVertical={3}>
-                        <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>Save 33%</Text>
+                        <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>{annualSaving}</Text>
                       </Stack>
                     </Stack>
                   </Stack>
@@ -186,10 +212,10 @@ export default function PremiumScreen() {
                   </Stack>
                   <Stack alignItems="flex-end" gap={2}>
                     <Stack horizontal alignItems="baseline" gap={2}>
-                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£4.99</Text>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>{price('monthly', '£4.99')}</Text>
                       <Text variant="caption" color={C.textSecondary}>/mo</Text>
                     </Stack>
-                    <Text variant="caption" color={C.textSecondary}>£4.99/month</Text>
+                    <Text variant="caption" color={C.textSecondary}>{price('monthly', '£4.99')}/month</Text>
                   </Stack>
                 </Stack>
               </Stack>
@@ -208,7 +234,7 @@ export default function PremiumScreen() {
                   </Stack>
                   <Stack alignItems="flex-end" gap={2}>
                     <Stack horizontal alignItems="baseline" gap={2}>
-                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£9.99</Text>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>{price('quarterly', '£9.99')}</Text>
                     </Stack>
                     <Text variant="caption" color={C.textSecondary}>every 3 months</Text>
                   </Stack>
@@ -229,7 +255,7 @@ export default function PremiumScreen() {
                   </Stack>
                   <Stack alignItems="flex-end" gap={2}>
                     <Stack horizontal alignItems="baseline" gap={2}>
-                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>£1.99</Text>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>{price('weekly', '£1.99')}</Text>
                     </Stack>
                     <Text variant="caption" color={C.textSecondary}>per week</Text>
                   </Stack>
@@ -267,20 +293,34 @@ export default function PremiumScreen() {
           </TouchableOpacity>
 
           <Text variant="caption" color={C.textSecondary} textAlign="center" style={{ marginTop: 10, lineHeight: 18 }}>
-            {selected === 'monthly'   ? '7-day free trial, then £4.99/month.'
-              : selected === 'annual'   ? '£39.99/year.'
-              : selected === 'quarterly' ? '£9.99 every 3 months.'
-              : '£1.99/week.'}
-            {' '}Renews automatically unless cancelled at least 24 hours before the end of the current period. Cancel anytime by contacting support.
+            {selected === 'monthly'   ? `7-day free trial, then ${price('monthly', '£4.99')}/month.`
+              : selected === 'annual'   ? `${price('annual', '£39.99')}/year.`
+              : selected === 'quarterly' ? `${price('quarterly', '£9.99')} every 3 months.`
+              : `${price('weekly', '£1.99')}/week.`}
+            {' '}Renews automatically unless cancelled at least 24 hours before the end of the current period.
+            {ENABLE_REVENUECAT
+              ? ' Manage or cancel in Settings → your name → Subscriptions.'
+              : ' Cancel anytime by contacting support.'}
           </Text>
 
-          {/* Stripe trust note */}
-          <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={16}>
-            <Feather name="lock" size={13} color={C.textMuted} />
-            <Text variant="caption" color={C.textMuted} fontWeight="500">
-              Secure payment via Stripe
-            </Text>
-          </Stack>
+          {ENABLE_REVENUECAT ? (
+            <Stack alignItems="center" gap={8} marginTop={16}>
+              <TouchableOpacity onPress={restore} activeOpacity={0.7} hitSlop={8}>
+                <Text variant="caption" color={TEAL} fontWeight="700">Restore Purchases</Text>
+              </TouchableOpacity>
+              <Text variant="caption" color={C.textMuted} textAlign="center">
+                Payment charged to your Apple ID at confirmation.
+              </Text>
+            </Stack>
+          ) : (
+            /* Stripe trust note */
+            <Stack horizontal alignItems="center" justifyContent="center" gap={6} marginTop={16}>
+              <Feather name="lock" size={13} color={C.textMuted} />
+              <Text variant="caption" color={C.textMuted} fontWeight="500">
+                Secure payment via Stripe
+              </Text>
+            </Stack>
+          )}
 
           {/* Required by App Store guideline 3.1.2 — functional links to the privacy policy and terms (EULA) */}
           <Stack horizontal alignItems="center" justifyContent="center" gap={8} marginTop={12}>

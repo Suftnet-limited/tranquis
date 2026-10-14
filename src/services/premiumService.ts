@@ -21,7 +21,7 @@
  */
 import { Platform, Linking } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
-import Purchases, { type CustomerInfo } from 'react-native-purchases'
+import Purchases, { type CustomerInfo, type PurchasesPackage } from 'react-native-purchases'
 import { PREMIUM_STORAGE_KEY, PREMIUM_ENTITLEMENT_ID, PREMIUM_SHARED_TEST_PROJECT, WEB_SUBSCRIBE_URL, ENABLE_REVENUECAT } from '../constants/premium'
 import { api } from './api'
 
@@ -30,9 +30,9 @@ import { api } from './api'
 // against App Store Connect, a "goog_" key only against Play Console.
 // These are RevenueCat's public/client keys (same category as a Stripe
 // publishable key) — they're meant to ship inside the app, not secrets.
-// Revvo's RevenueCat project (Revvo replaces Revvo on the App Store, same bundle id).
-const IOS_API_KEY     = 'TRANQUIS_IOS_RC_KEY_HERE'
-const ANDROID_API_KEY = 'TRANQUIS_ANDROID_RC_KEY_HERE'
+// Set in .env / .env.local (EXPO_PUBLIC_RC_IOS_KEY, EXPO_PUBLIC_RC_ANDROID_KEY), and as EAS env vars for cloud builds.
+const IOS_API_KEY     = process.env.EXPO_PUBLIC_RC_IOS_KEY ?? ''
+const ANDROID_API_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY ?? ''
 
 const REVENUECAT_API_KEY = Platform.select({
   ios:     IOS_API_KEY,
@@ -200,6 +200,46 @@ const purchaseByPackageKey = async (
       return false
     }
     if (__DEV__) console.log(`[Premium] ${key} purchase failed:`, err?.message)
+    throw err
+  }
+}
+
+// ─── Plan packages (Pro screen) ───────────────────────────────────────────────
+// The four paywall plans, keyed the same way as the web checkout plans.
+export type PlanId = 'weekly' | 'monthly' | 'quarterly' | 'annual'
+
+const PACKAGE_PLAN: Record<string, PlanId> = {
+  $rc_weekly:      'weekly',
+  $rc_monthly:     'monthly',
+  $rc_three_month: 'quarterly',
+  $rc_annual:      'annual',
+}
+
+/** The current ("default") offering's packages, by plan. Empty when RevenueCat is unavailable. */
+export const getPlanPackages = async (): Promise<Partial<Record<PlanId, PurchasesPackage>>> => {
+  await initializeRevenueCat()
+  if (initFailed) return {}
+  const offerings = await Purchases.getOfferings()
+  const current = offerings.current ?? offerings.all['default']
+  const byPlan: Partial<Record<PlanId, PurchasesPackage>> = {}
+  for (const pkg of current?.availablePackages ?? []) {
+    const plan = PACKAGE_PLAN[pkg.identifier]
+    if (plan) byPlan[plan] = pkg
+  }
+  return byPlan
+}
+
+/** Buys a package. Resolves true once Pro is active, null if the user cancelled Apple's sheet. */
+export const purchasePlanPackage = async (pkg: PurchasesPackage): Promise<boolean | null> => {
+  await initializeRevenueCat()
+  if (initFailed) {
+    throw new Error('Purchases are unavailable in this build. Try again from the App Store / Play Store version.')
+  }
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg)
+    return (await syncFromCustomerInfo(customerInfo)).isActive
+  } catch (err: any) {
+    if (err?.code === Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR || err?.userCancelled) return null
     throw err
   }
 }

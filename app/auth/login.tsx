@@ -1,26 +1,20 @@
 import React, { useState } from 'react'
-import { Platform, KeyboardAvoidingView } from 'react-native'
+import { Platform, KeyboardAvoidingView, ScrollView, Text as RNText, TouchableOpacity, View } from 'react-native'
 import { router } from 'expo-router'
-import { StyledPage, StyledScrollView, Stack, StyledCard, StyledPressable, StyledForm } from 'fluent-styles'
-import { Text } from '../../src/components/Text'
-import { AuthBackground, BrandMark, GradientButton, OrDivider, EyeToggle, EMAIL_RE } from '../../src/components/AuthUI'
-import { useColors, useIsDark, getFieldColors } from '../../src/constants'
+import { StyledPage } from 'fluent-styles'
+import { AuthHeader, AuthField, AuthButton, OrDivider, EMAIL_RE, FONT, TEAL, useAuthColors } from '../../src/components/AuthUI'
 import { useAuth } from '../../src/hooks'
-import { MailIcon, LockIcon } from '../../src/icons'
 import { ResetPasswordSheet } from '../../src/components/ResetPasswordSheet'
 
 export default function LoginScreen() {
-  const C      = useColors()
-  const isDark = useIsDark()
+  const A = useAuthColors()
   const { login, loading } = useAuth()
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [showPw,   setShowPw]   = useState(false)
   const [tried,    setTried]    = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
 
-  const FC = getFieldColors(C)
   const emailError = tried && !EMAIL_RE.test(email.trim()) ? 'Enter a valid email address' : undefined
   const pwError    = tried && !password ? 'Enter your password' : undefined
 
@@ -31,80 +25,64 @@ export default function LoginScreen() {
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
-      statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
+    <StyledPage flex={1} backgroundColor={A.bg} showStatusBar
+      statusBarStyle={A.isDark ? 'light-content' : 'dark-content'}
+      statusBarBackgroundColor={Platform.OS === 'android' ? A.bg : undefined}
     >
-      <AuthBackground />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <StyledScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 40 }}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Stack marginBottom={36}>
-            <BrandMark title="Welcome back" subtitle="Sign in to Tranquis" />
-          </Stack>
+          <AuthHeader title="Welcome back" subtitle="Sign in to continue translating" />
 
-          <StyledCard backgroundColor={C.bgCard} borderRadius={22} padding={20} marginBottom={14}
-            borderWidth={1} borderColor={C.border}
-            style={{ shadowColor: C.primary, shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 4 }}
+          <View style={{ gap: 18, marginTop: 36 }}>
+            <AuthField
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              returnKeyType="next"
+              error={emailError}
+            />
+            <AuthField
+              label="Password"
+              placeholder="Your password"
+              value={password}
+              onChangeText={setPassword}
+              password
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={submit}
+              error={pwError}
+            />
+          </View>
+
+          <TouchableOpacity onPress={() => setResetOpen(true)} hitSlop={8}
+            style={{ alignSelf: 'flex-end', marginTop: 16, marginBottom: 24 }}
+            accessibilityRole="button" accessibilityLabel="Forgot password"
           >
-            <Stack gap={16}>
-              <StyledForm.Input
-                label="Email address"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                errorMessage={emailError}
-                leftIcon={<MailIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
-                focusColor={C.primary}
-                colors={FC}
-              />
-              <StyledForm.Input
-                label="Password"
-                placeholder="Your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPw}
-                returnKeyType="go"
-                onSubmitEditing={submit}
-                errorMessage={pwError}
-                leftIcon={<LockIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
-                rightIcon={<EyeToggle shown={showPw} onPress={() => setShowPw((v) => !v)} />}
-                focusColor={C.primary}
-                colors={FC}
-              />
-            </Stack>
-          </StyledCard>
+            <RNText style={{ fontFamily: FONT.semibold, fontSize: 14, color: TEAL }}>Forgot password?</RNText>
+          </TouchableOpacity>
 
-          <Stack alignItems="flex-end" marginBottom={4}>
-            <StyledPressable onPress={() => setResetOpen(true)} hitSlop={8}
-              accessibilityRole="button" accessibilityLabel="Forgot password"
-            >
-              <Text variant="bodySmall" color={C.primary} fontWeight="700">Forgot password?</Text>
-            </StyledPressable>
-          </Stack>
-
-          <Stack marginTop={8}>
-            <GradientButton label="Sign in" loading={loading} onPress={submit} />
-          </Stack>
+          <AuthButton label="Sign in →" loading={loading} onPress={submit} />
 
           <OrDivider />
 
-          <Stack horizontal alignItems="center" justifyContent="center" gap={5}>
-            <Text variant="bodySmall" color={C.textSecondary}>Don't have an account?</Text>
-            <StyledPressable onPress={() => router.replace('/auth/register' as any)}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <RNText style={{ fontFamily: FONT.body, fontSize: 15, color: A.muted }}>Don't have an account?</RNText>
+            <TouchableOpacity onPress={() => router.replace('/auth/register' as any)}
               accessibilityRole="button" accessibilityLabel="Create an account"
             >
-              <Text variant="bodySmall" color={C.primary} fontWeight="700">Create one</Text>
-            </StyledPressable>
-          </Stack>
-        </StyledScrollView>
+              <RNText style={{ fontFamily: FONT.semibold, fontSize: 15, color: TEAL }}>Create one</RNText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       <ResetPasswordSheet

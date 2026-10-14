@@ -1,136 +1,166 @@
-import React from 'react'
-import { ActivityIndicator, StyleSheet } from 'react-native'
-import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle } from 'react-native-svg'
-import { ArrowRightIcon, EyeIcon, EyeOffIcon } from '../icons'
-import { Stack, StyledPressable } from 'fluent-styles'
-import { Text } from './Text'
-import { useColors } from '../constants'
+import React, { useState } from 'react'
+import { ActivityIndicator, Text as RNText, TextInput, TouchableOpacity, View, type TextInputProps } from 'react-native'
+import { EyeIcon, EyeOffIcon } from '../icons'
+import { useColors, useIsDark } from '../constants'
 
-// Soft teal decorative background circles for auth screens.
-export function AuthBackground() {
+// Flat auth design (mock ui/login.png, createaccount.png, forgotpassword.png): no cards, no shadows.
+
+export const TEAL   = '#3DBFA0'
+export const PURPLE = '#6C63FF'
+
+export const FONT = {
+  heading:  'Sora_800ExtraBold',
+  bold:     'Sora_700Bold',
+  body:     'Inter_400Regular',
+  medium:   'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+} as const
+
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+/** Light/dark tokens shared by the auth screens. */
+export function useAuthColors() {
   const C = useColors()
+  const isDark = useIsDark()
+  return {
+    bg:      isDark ? C.bg : '#FFFFFF',
+    text:    isDark ? C.textPrimary : '#111827',
+    muted:   isDark ? C.textSecondary : '#6B7280',
+    faint:   isDark ? C.textMuted : '#9CA3AF',
+    border:  isDark ? '#1F2937' : '#E5E7EB',
+    fill:    isDark ? '#1A2335' : '#F9FAFB',
+    error:   '#EF4444',
+    isDark,
+  }
+}
+
+/** Globe tile + wordmark, then the screen heading and subtitle. */
+export function AuthHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  const A = useAuthColors()
   return (
-    <Stack style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Stack position="absolute" top={-90} left={-110} width={300} height={300} borderRadius={150}
-        backgroundColor={C.primaryBg} style={{ opacity: 0.9 }} />
-      <Stack position="absolute" top={40} right={-140} width={320} height={320} borderRadius={160}
-        backgroundColor={C.primaryBg} style={{ opacity: 0.55 }} />
-      <Stack position="absolute" bottom={-60} left={60} width={200} height={200} borderRadius={100}
-        backgroundColor={C.primaryBg} style={{ opacity: 0.4 }} />
-    </Stack>
+    <View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: TEAL, alignItems: 'center', justifyContent: 'center' }}>
+          <RNText style={{ fontSize: 22, lineHeight: 28 }}>🌍</RNText>
+        </View>
+        <RNText style={{ fontFamily: FONT.bold, fontSize: 18, color: A.text }}>Tranquis</RNText>
+      </View>
+      <RNText style={{ fontFamily: FONT.heading, fontSize: 30, lineHeight: 36, letterSpacing: -0.8, color: A.text }}>
+        {title}
+      </RNText>
+      <RNText style={{ fontFamily: FONT.body, fontSize: 15, color: A.muted, marginTop: 6 }}>{subtitle}</RNText>
+    </View>
   )
 }
 
-// Tranquis brand mark: stylised "T" with teal gradient, globe/wave motif
-export function BrandMark({ title, subtitle }: { title?: string; subtitle?: string }) {
-  const C = useColors()
+export function EyeToggle({ shown, onPress }: { shown: boolean; onPress: () => void }) {
+  const A = useAuthColors()
   return (
-    <Stack alignItems="center" gap={14}>
-      <Stack
-        width={92} height={92} borderRadius={28} alignItems="center" justifyContent="center"
-        backgroundColor={C.bgCard}
-        style={{
-          borderWidth: 1, borderColor: `${C.primary}30`,
-          shadowColor: C.primary, shadowOpacity: 0.32, shadowRadius: 24,
-          shadowOffset: { width: 0, height: 10 }, elevation: 10,
-        }}
-      >
-        <Svg width={74} height={74} viewBox="0 0 74 74" preserveAspectRatio="xMidYMid meet">
-          <Defs>
-            <LinearGradient id="tranquis-logo-grad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0"    stopColor="#5EEAD4" />
-              <Stop offset="0.4"  stopColor="#14B8A6" />
-              <Stop offset="0.75" stopColor="#0D9488" />
-              <Stop offset="1"    stopColor="#134E4A" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="74" height="74" rx="24" fill={C.bgCard} />
-          {/* Globe-ish wave circles */}
-          <Circle cx="37" cy="37" r="24" stroke="url(#tranquis-logo-grad)" strokeWidth="1.5"
-            fill="none" strokeDasharray="4 3" strokeLinecap="round" />
-          <Circle cx="37" cy="37" r="16" stroke="url(#tranquis-logo-grad)" strokeWidth="1"
-            fill="none" strokeOpacity="0.4" />
-          {/* T letterform */}
-          <Path
-            d="M22 22H52V29H41V52H33V29H22V22Z"
-            fill="url(#tranquis-logo-grad)"
-          />
-          <Path
-            d="M22 22H52V29H41V52H33V29H22V22Z"
-            fill="none"
-            stroke="rgba(255,255,255,0.25)"
-            strokeWidth="1.5"
-          />
-        </Svg>
-      </Stack>
-      {(title || subtitle) && (
-        <Stack alignItems="center" gap={4}>
-          {!!title && <Text variant="header" color={C.textPrimary} fontWeight="800">{title}</Text>}
-          {!!subtitle && <Text variant="body" color={C.textSecondary}>{subtitle}</Text>}
-        </Stack>
-      )}
-    </Stack>
+    <TouchableOpacity onPress={onPress} hitSlop={10} style={{ paddingHorizontal: 4 }}
+      accessibilityRole="button" accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+    >
+      {shown ? <EyeOffIcon size={18} strokeWidth={1.8} color={A.muted} /> : <EyeIcon size={18} strokeWidth={1.8} color={A.muted} />}
+    </TouchableOpacity>
   )
 }
 
-export function GradientButton({ label, onPress, loading, disabled, arrow = true }: {
-  label: string; onPress: () => void; loading?: boolean; disabled?: boolean; arrow?: boolean
+/** Uppercase micro-label, 52px input, teal border on focus. `password` adds the eye toggle. */
+export function AuthField({ label, error, password, children, ...input }: TextInputProps & {
+  label: string
+  error?: string
+  password?: boolean
+  children?: React.ReactNode   // rendered under the input (e.g. the strength bar)
 }) {
-  const C = useColors()
-  const inactive = disabled || loading
+  const A = useAuthColors()
+  const [focused, setFocused] = useState(false)
+  const [shown, setShown] = useState(false)
   return (
-    <StyledPressable
-      onPress={onPress} disabled={inactive}
+    <View>
+      <RNText style={{ fontFamily: FONT.semibold, fontSize: 12, letterSpacing: 0.8, color: A.muted, marginBottom: 8 }}>
+        {label.toUpperCase()}
+      </RNText>
+      <View style={{
+        height: 52, borderRadius: 14, borderWidth: 1, paddingHorizontal: 16,
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: A.fill,
+        borderColor: error ? A.error : focused ? TEAL : A.border,
+      }}>
+        <TextInput
+          {...input}
+          secureTextEntry={password ? !shown : input.secureTextEntry}
+          placeholderTextColor={A.faint}
+          selectionColor={TEAL}
+          onFocus={(e) => { setFocused(true); input.onFocus?.(e) }}
+          onBlur={(e) => { setFocused(false); input.onBlur?.(e) }}
+          style={[{ flex: 1, height: '100%', fontFamily: FONT.body, fontSize: 16, color: A.text }, input.style]}
+        />
+        {password && <EyeToggle shown={shown} onPress={() => setShown((v) => !v)} />}
+      </View>
+      {children}
+      {!!error && (
+        <RNText style={{ fontFamily: FONT.medium, fontSize: 12, color: A.error, marginTop: 6 }}>{error}</RNText>
+      )}
+    </View>
+  )
+}
+
+/** Full-width 56px flat CTA. */
+export function AuthButton({ label, onPress, loading, disabled, color = TEAL }: {
+  label: string
+  onPress: () => void
+  loading?: boolean
+  disabled?: boolean
+  color?: string
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} disabled={loading || disabled} activeOpacity={0.85}
+      accessibilityRole="button" accessibilityLabel={label.replace('→', '').trim()}
       style={{
-        height: 54, borderRadius: 16, overflow: 'hidden', justifyContent: 'center',
-        opacity: disabled ? 0.55 : 1,
-        shadowColor: C.primary, shadowOpacity: 0.38, shadowRadius: 16,
-        shadowOffset: { width: 0, height: 6 }, elevation: 8,
+        height: 56, borderRadius: 16, backgroundColor: color,
+        alignItems: 'center', justifyContent: 'center',
+        opacity: disabled ? 0.6 : 1,
       }}
     >
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none">
-        <Defs>
-          <LinearGradient id="tranquis-btn" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={C.primary} />
-            <Stop offset="1" stopColor={C.primaryDark} />
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#tranquis-btn)" />
-      </Svg>
-      <Stack horizontal alignItems="center" justifyContent="center" paddingHorizontal={20}>
-        {loading
-          ? <ActivityIndicator color={C.white} />
-          : <Text variant="button" color={C.white}>{label}</Text>}
-        {arrow && !loading && (
-          <Stack position="absolute" right={20}>
-            <ArrowRightIcon size={20} strokeWidth={2.2} color={C.white} />
-          </Stack>
-        )}
-      </Stack>
-    </StyledPressable>
+      {loading
+        ? <ActivityIndicator color="#FFF" />
+        : <RNText style={{ fontFamily: FONT.bold, fontSize: 17, color: '#FFF' }}>{label}</RNText>}
+    </TouchableOpacity>
   )
 }
 
 export function OrDivider() {
-  const C = useColors()
+  const A = useAuthColors()
   return (
-    <Stack horizontal alignItems="center" gap={14} marginVertical={22}>
-      <Stack flex={1} height={1} backgroundColor={C.border} />
-      <Text variant="caption" color={C.textSecondary} fontWeight="600">OR</Text>
-      <Stack flex={1} height={1} backgroundColor={C.border} />
-    </Stack>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 24 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: A.border }} />
+      <RNText style={{ fontFamily: FONT.semibold, fontSize: 12, letterSpacing: 1, color: A.faint }}>OR</RNText>
+      <View style={{ flex: 1, height: 1, backgroundColor: A.border }} />
+    </View>
   )
 }
 
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+/** 0–4: length, mixed case, a digit, a symbol. */
+export function passwordStrength(pw: string): number {
+  if (!pw) return 0
+  let score = pw.length >= 8 ? 1 : 0
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++
+  if (/\d/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw)) score++
+  return Math.max(1, score)
+}
 
-export function EyeToggle({ shown, onPress }: { shown: boolean; onPress: () => void }) {
-  const C = useColors()
+/** Four segments under the password field: red → amber → teal. */
+export function StrengthBar({ password }: { password: string }) {
+  const A = useAuthColors()
+  const score = passwordStrength(password)
+  const color = score <= 1 ? '#EF4444' : score <= 2 ? '#F59E0B' : TEAL
   return (
-    <StyledPressable onPress={onPress} hitSlop={10} style={{ paddingHorizontal: 6 }}
-      accessibilityRole="button" accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+    <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}
+      accessibilityLabel={`Password strength ${score} of 4`}
     >
-      {shown ? <EyeOffIcon size={18} strokeWidth={1.8} color={C.textSecondary} /> : <EyeIcon size={18} strokeWidth={1.8} color={C.textSecondary} />}
-    </StyledPressable>
+      {[1, 2, 3, 4].map((i) => (
+        <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i <= score ? color : A.border }} />
+      ))}
+    </View>
   )
 }

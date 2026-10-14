@@ -23,8 +23,8 @@ type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 const FEATURES = [
   'Unlimited text, voice & camera translations',
   'Live voice interpreter (two-way, real-time)',
-  'Natural text-to-speech in your choice of voice',
-  '37 languages, including Nigerian languages',
+  'Save unlimited phrases to your phrasebook',
+  'Priority support',
   'Context & tone aware translations',
   'Unlimited phrasebook saves',
 ]

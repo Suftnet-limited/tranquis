@@ -1,198 +1,234 @@
-import React, { useRef, useState } from 'react'
-import { Platform, ScrollView, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import {
+  Animated, Easing, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView,
+  Text as RNText, TouchableOpacity, useWindowDimensions, View,
+} from 'react-native'
 import { router } from 'expo-router'
-import { ArrowDownIcon, MapPinIcon, MicIcon, BookmarkIcon } from '../src/icons'
-import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Text as SvgText } from 'react-native-svg'
-import { StyledPage, Stack, StyledPressable } from 'fluent-styles'
-import { Text } from '../src/components/Text'
-import { useColors, useIsDark } from '../src/constants'
+import { StyledPage } from 'fluent-styles'
 import { setOnboardingSeen } from '../src/stores'
-import { GradientButton } from '../src/components/AuthUI'
+import { AuthButton, FONT, PURPLE, TEAL, useAuthColors } from '../src/components/AuthUI'
 
 const SLIDES = [
   {
-    title: 'Type, speak or photograph — all translated',
-    desc:  'Tranquis understands text, voice and camera. Translate menus, signs, documents and conversations in seconds.',
-    scene: 'text' as const,
+    tag:     'WELCOME TO TRANQUIS',
+    title:   ['Speak every language,', 'anywhere'],
+    body:    'Real-time translation for text, voice, and camera — in 37 languages. Your words, understood everywhere.',
+    accent:  TEAL,
+    scene:   'globe' as const,
   },
   {
-    title: 'Live interpreter for real conversations',
-    desc:  'Talk naturally and hear translations in real time. Perfect for meetings, travel and language learning.',
-    scene: 'voice' as const,
+    tag:     'LIVE INTERPRETER',
+    title:   ['Two-way voice,', 'in real time'],
+    body:    'Hold a natural conversation across any language barrier. Tranquis listens, translates, and speaks — instantly, for both sides.',
+    accent:  TEAL,
+    scene:   'voice' as const,
   },
   {
-    title: 'Build your personal phrasebook',
-    desc:  'Save useful phrases from any translation and organise them by category. Never forget an important expression again.',
-    scene: 'phrase' as const,
+    tag:     'CAMERA TRANSLATE',
+    title:   ['Point, shoot,', 'understood'],
+    body:    'Aim your camera at any text — a menu, a sign, a document — and see the translation overlaid instantly.',
+    accent:  PURPLE,
+    scene:   'camera' as const,
   },
-] as const
+]
 
-const SIZE = 300
+const SCENE = 280
 
-function Backdrop({ fg }: { fg: string }) {
-  const C = useColors()
+/** A looping 0→1 driver; `delay` staggers several of them. */
+function useLoop(duration: number, delay = 0) {
+  const v = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    const anim = Animated.loop(Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(v, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }),
+    ]))
+    anim.start()
+    return () => anim.stop()
+  }, [v, duration, delay])
+  return v
+}
+
+function Pill({ label, color, filled, tag }: { label: string; color: string; filled?: boolean; tag?: boolean }) {
+  const A = useAuthColors()
   return (
-    <>
-      <Stack position="absolute" top={20} left={30} width={240} height={240} borderRadius={120}
-        backgroundColor={fg} style={{ opacity: 0.09 }} />
-      <Stack position="absolute" bottom={0} right={10} width={140} height={140} borderRadius={70}
-        backgroundColor={C.primary} style={{ opacity: 0.07 }} />
-      <Svg width={SIZE} height={SIZE} style={{ position: 'absolute' }}>
-        <Circle cx={SIZE / 2} cy={SIZE / 2} r={136} stroke={fg} strokeOpacity={0.25} strokeWidth={1.2} fill="none" />
-        <Circle cx={SIZE / 2 + 96} cy={SIZE / 2 - 96} r={14} fill={fg} fillOpacity={0.2} />
-        <Circle cx={SIZE / 2 + 96} cy={SIZE / 2 - 96} r={6.5} fill={fg} />
-      </Svg>
-    </>
+    <View style={{
+      paddingHorizontal: tag ? 14 : 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
+      borderColor: `${color}40`, backgroundColor: filled ? `${color}14` : A.bg,
+    }}>
+      <RNText style={{ fontFamily: FONT.semibold, fontSize: tag ? 12 : 13, letterSpacing: tag ? 1.6 : 0, color }}>{label}</RNText>
+    </View>
   )
 }
 
-const glass = (fg: string, C: any) => ({
-  backgroundColor: C.bgCard, borderWidth: 1, borderColor: `${fg}40`,
-  shadowColor: fg, shadowOpacity: 0.28, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 10,
-})
+// ─── Slide 1: globe, pulsing rings, orbiting language badges ─────────────────
 
-function TextHero() {
-  const C  = useColors()
-  const fg = C.primary
+function Ring({ delay }: { delay: number }) {
+  const t = useLoop(3000, delay)
   return (
-    <Stack width={SIZE} height={SIZE} alignItems="center" justifyContent="center" marginBottom={28}>
-      <Backdrop fg={fg} />
-      {/* Translation card */}
-      <Stack width={220} borderRadius={24} padding={18} gap={14} style={glass(fg, C)}>
-        {/* Source bubble */}
-        <Stack backgroundColor={C.bgInput} borderRadius={14} padding={12}>
-          <Text variant="bodySmall" color={C.textSecondary} fontWeight="600" marginBottom={4}>English</Text>
-          <Text variant="body" color={C.textPrimary}>Where is the train station?</Text>
-        </Stack>
-        {/* Arrow */}
-        <Stack alignItems="center">
-          <Stack width={32} height={32} borderRadius={16} alignItems="center" justifyContent="center"
-            backgroundColor={fg} style={{ shadowColor: fg, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}
-          >
-            <ArrowDownIcon size={16} strokeWidth={2.2} color={C.white} />
-          </Stack>
-        </Stack>
-        {/* Target bubble */}
-        <Stack backgroundColor={C.primaryBg} borderRadius={14} padding={12}
-          style={{ borderWidth: 1, borderColor: `${fg}25` }}
-        >
-          <Text variant="bodySmall" color={C.primary} fontWeight="600" marginBottom={4}>Spanish</Text>
-          <Text variant="body" color={C.textPrimary}>¿Dónde está la estación de tren?</Text>
-        </Stack>
-      </Stack>
-      {/* Tone chip */}
-      <Stack position="absolute" right={10} top={50} horizontal alignItems="center" gap={6}
-        borderRadius={20} paddingHorizontal={12} paddingVertical={8}
-        style={glass(C.sumColor, C)}
-      >
-        <MapPinIcon size={12} strokeWidth={2.2} color={C.sumColor} />
-        <Text variant="caption" color={C.textPrimary} fontWeight="700">Travel</Text>
-      </Stack>
-    </Stack>
+    <Animated.View style={{
+      position: 'absolute', width: 120, height: 120, borderRadius: 60,
+      borderWidth: 1.5, borderColor: TEAL,
+      opacity: t.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.45, 0] }),
+      transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 2.3] }) }],
+    }} />
   )
 }
 
-function VoiceHero() {
-  const C  = useColors()
-  const fg = C.primary
+const BADGES = [
+  { code: 'EN', angle: -90 },
+  { code: 'AR', angle: 0 },
+  { code: 'ES', angle: 50 },
+  { code: 'FR', angle: 130 },
+]
+
+function GlobeScene() {
+  const A = useAuthColors()
+  const spin = useLoop(30000)
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  const counter = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] })
+  const R = 112
   return (
-    <Stack width={SIZE} height={SIZE} alignItems="center" justifyContent="center" marginBottom={28}>
-      <Backdrop fg={fg} />
-
-      {/* Waveform bars */}
-      <Stack horizontal gap={5} alignItems="center" position="absolute" top={60}>
-        {[18, 30, 42, 26, 38, 18, 34, 46, 22, 36, 20, 30].map((h, i) => (
-          <Stack key={i} width={5} height={h} borderRadius={3}
-            backgroundColor={i % 3 === 0 ? fg : C.bgMuted} style={{ opacity: i % 3 === 0 ? 1 : 0.6 }}
-          />
-        ))}
-      </Stack>
-
-      {/* Orb */}
-      <Stack width={120} height={120} borderRadius={60} alignItems="center" justifyContent="center"
-        style={{
-          ...glass(fg, C),
-          shadowOpacity: 0.45, shadowRadius: 30,
-        }}
-      >
-        <Svg width={120} height={120} style={{ position: 'absolute' }}>
-          <Defs>
-            <LinearGradient id="orb" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor={C.primaryLight} />
-              <Stop offset="1" stopColor={C.primaryDark} />
-            </LinearGradient>
-          </Defs>
-          <Circle cx={60} cy={60} r={60} fill="url(#orb)" fillOpacity={0.15} />
-        </Svg>
-        <MicIcon size={44} strokeWidth={1.7} color={fg} />
-      </Stack>
-
-      {/* Transcript chips */}
-      <Stack position="absolute" left={4} bottom={68} borderRadius={14} paddingHorizontal={12} paddingVertical={8}
-        style={glass(fg, C)}
-      >
-        <Text variant="caption" color={C.textSecondary} fontWeight="500">You: Hello, how much does this cost?</Text>
-      </Stack>
-      <Stack position="absolute" right={4} bottom={20} borderRadius={14} paddingHorizontal={12} paddingVertical={8}
-        backgroundColor={C.primaryBg} style={{ borderWidth: 1, borderColor: `${fg}25` }}
-      >
-        <Text variant="caption" color={C.primary} fontWeight="500">Hola, ¿cuánto cuesta esto?</Text>
-      </Stack>
-    </Stack>
+    <View style={{ width: SCENE, height: SCENE, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: 2 * R, height: 2 * R, borderRadius: R, borderWidth: 1, borderColor: `${TEAL}30` }} />
+      <Ring delay={0} />
+      <Ring delay={1000} />
+      <Ring delay={2000} />
+      <View style={{
+        width: 120, height: 120, borderRadius: 60, borderWidth: 1.5, borderColor: `${TEAL}70`,
+        backgroundColor: A.isDark ? `${TEAL}14` : '#F3FBF8', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <RNText style={{ fontSize: 80, lineHeight: 96 }}>🌍</RNText>
+      </View>
+      {/* The badge ring turns slowly; each badge counter-rotates to stay upright */}
+      <Animated.View style={{ position: 'absolute', width: SCENE, height: SCENE, transform: [{ rotate }] }}>
+        {BADGES.map(({ code, angle }) => {
+          const rad = (angle * Math.PI) / 180
+          return (
+            <Animated.View key={code} style={{
+              position: 'absolute', left: SCENE / 2 + R * Math.cos(rad) - 22, top: SCENE / 2 + R * Math.sin(rad) - 22,
+              width: 44, height: 44, borderRadius: 22, backgroundColor: A.bg,
+              borderWidth: 1, borderColor: A.border, alignItems: 'center', justifyContent: 'center',
+              transform: [{ rotate: counter }],
+            }}>
+              <RNText style={{ fontFamily: FONT.bold, fontSize: 13, color: TEAL }}>{code}</RNText>
+            </Animated.View>
+          )
+        })}
+      </Animated.View>
+    </View>
   )
 }
 
-function PhraseHero() {
-  const C  = useColors()
-  const fg = C.primary
-  const phrases = [
-    { en: 'Thank you very much', es: 'Muchas gracias',       ph: 'MOO-chas GRA-see-as' },
-    { en: 'Where is the bathroom?', es: '¿Dónde está el baño?', ph: 'DON-de es-TA el BA-nyo' },
-    { en: 'Can I have the check?',  es: '¿La cuenta, por favor?', ph: 'la KWEN-ta por fa-VOR' },
-  ]
+// ─── Slide 2: voice wave around a mic, translation bubbles ───────────────────
+
+function WaveBar({ index }: { index: number }) {
+  const t = useLoop(1100, index * 110)
+  const peak = [0.5, 0.75, 1, 0.85, 0.6, 0.85, 1, 0.75, 0.5][index]
   return (
-    <Stack width={SIZE} height={SIZE} alignItems="center" justifyContent="center" marginBottom={28}>
-      <Backdrop fg={fg} />
-      <Stack gap={10} style={{ width: 230 }}>
-        {phrases.map((p, i) => (
-          <Stack key={i} borderRadius={16} padding={12} style={glass(fg, C)}>
-            <Stack horizontal alignItems="center" justifyContent="space-between">
-              <Stack flex={1}>
-                <Text variant="caption" color={C.textPrimary} fontWeight="700" numberOfLines={1}>{p.en}</Text>
-                <Text variant="caption" color={C.primary} numberOfLines={1}>{p.es}</Text>
-                <Text variant="caption" color={C.textMuted} style={{ fontStyle: 'italic' }} numberOfLines={1}>{p.ph}</Text>
-              </Stack>
-              <Stack width={30} height={30} borderRadius={15} alignItems="center" justifyContent="center"
-                backgroundColor={C.primaryBg}
-              >
-                <BookmarkIcon size={13} strokeWidth={2.2} color={fg} />
-              </Stack>
-            </Stack>
-          </Stack>
-        ))}
-      </Stack>
-    </Stack>
+    <Animated.View style={{
+      width: 6, height: 70 * peak, borderRadius: 3, backgroundColor: TEAL, marginHorizontal: 11,
+      transform: [{ scaleY: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.35, 1, 0.35] }) }],
+    }} />
   )
 }
 
-function Scene({ scene }: { scene: typeof SLIDES[number]['scene'] }) {
-  if (scene === 'voice')  return <VoiceHero />
-  if (scene === 'phrase') return <PhraseHero />
-  return <TextHero />
+function Bubble({ text, accent, style }: { text: string; accent?: boolean; style: object }) {
+  const A = useAuthColors()
+  return (
+    <View style={[{
+      position: 'absolute', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16,
+      backgroundColor: A.bg, borderWidth: 1, borderColor: accent ? `${TEAL}50` : A.border,
+    }, style]}>
+      <RNText style={{ fontFamily: FONT.bold, fontSize: 15, color: accent ? TEAL : A.text }}>{text}</RNText>
+    </View>
+  )
 }
+
+function VoiceScene() {
+  return (
+    <View style={{ width: SCENE, height: SCENE, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', position: 'absolute' }}>
+        {Array.from({ length: 9 }, (_, i) => <WaveBar key={i} index={i} />)}
+      </View>
+      <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: TEAL, alignItems: 'center', justifyContent: 'center' }}>
+        <RNText style={{ fontSize: 40, lineHeight: 50 }}>🎙️</RNText>
+      </View>
+      <Bubble text="Bonjour!" style={{ top: 34, left: 6 }} />
+      <Bubble text="Hello!" accent style={{ top: 34, right: 6 }} />
+      <Bubble text="Hola, ¿cómo estás?" style={{ bottom: 34 }} />
+    </View>
+  )
+}
+
+// ─── Slide 3: viewfinder with a scanning line ────────────────────────────────
+
+function Corner({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
+  const top = pos[0] === 't', left = pos[1] === 'l'
+  return (
+    <View style={{
+      position: 'absolute', width: 28, height: 28,
+      ...(top ? { top: 0 } : { bottom: 0 }), ...(left ? { left: 0 } : { right: 0 }),
+      borderColor: TEAL, borderTopWidth: top ? 3 : 0, borderBottomWidth: top ? 0 : 3,
+      borderLeftWidth: left ? 3 : 0, borderRightWidth: left ? 0 : 3,
+      borderTopLeftRadius: pos === 'tl' ? 6 : 0, borderTopRightRadius: pos === 'tr' ? 6 : 0,
+      borderBottomLeftRadius: pos === 'bl' ? 6 : 0, borderBottomRightRadius: pos === 'br' ? 6 : 0,
+    }} />
+  )
+}
+
+function CameraScene() {
+  const A = useAuthColors()
+  const scan = useLoop(2200)
+  const row = (w: number, color: string) => <View style={{ width: w, height: 9, borderRadius: 5, backgroundColor: color }} />
+  return (
+    <View style={{ alignSelf: 'stretch', alignItems: 'center' }}>
+      <View style={{ width: 230, height: 230, alignItems: 'center', justifyContent: 'center' }}>
+        {(['tl', 'tr', 'bl', 'br'] as const).map((p) => <Corner key={p} pos={p} />)}
+        <View style={{ width: 170, borderRadius: 16, borderWidth: 1.5, borderColor: `${TEAL}55`, overflow: 'hidden', backgroundColor: A.bg }}>
+          {/* Original text, being scanned */}
+          <View style={{ height: 76, padding: 14, gap: 9 }}>
+            {row(120, A.border)}
+            {row(90, A.border)}
+            <Animated.View style={{
+              position: 'absolute', left: 0, right: 0, height: 2, backgroundColor: TEAL,
+              shadowColor: TEAL, shadowOpacity: 0.8, shadowRadius: 6,
+              transform: [{ translateY: scan.interpolate({ inputRange: [0, 1], outputRange: [4, 72] }) }],
+            }} />
+          </View>
+          {/* Translation */}
+          <View style={{ padding: 14, gap: 9, backgroundColor: `${TEAL}14`, borderTopWidth: 1, borderTopColor: `${TEAL}30` }}>
+            {row(110, `${TEAL}AA`)}
+            {row(80, `${TEAL}AA`)}
+          </View>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 18 }}>
+        {['Menus', 'Signs', 'Documents', 'Labels'].map((l) => <Pill key={l} label={l} color={TEAL} filled />)}
+      </View>
+    </View>
+  )
+}
+
+function Scene({ scene }: { scene: (typeof SLIDES)[number]['scene'] }) {
+  if (scene === 'voice') return <VoiceScene />
+  if (scene === 'camera') return <CameraScene />
+  return <GlobeScene />
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
-  const C      = useColors()
-  const isDark = useIsDark()
+  const A = useAuthColors()
   const { width } = useWindowDimensions()
-  const scrollRef  = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollView>(null)
   const [index, setIndex] = useState(0)
 
   const isLast = index === SLIDES.length - 1
 
+  // Shown once: remember it, then straight to sign-up
   const finish = async () => {
     await setOnboardingSeen()
-    router.replace('/auth/login')
+    router.replace('/auth/register')
   }
 
   const goNext = () => {
@@ -208,16 +244,10 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <StyledPage flex={1} backgroundColor={C.bg} showStatusBar
-      statusBarStyle={isDark ? 'light-content' : 'dark-content'}
-      statusBarBackgroundColor={Platform.OS === 'android' ? C.bg : undefined}
+    <StyledPage flex={1} backgroundColor={A.bg} showStatusBar
+      statusBarStyle={A.isDark ? 'light-content' : 'dark-content'}
+      statusBarBackgroundColor={Platform.OS === 'android' ? A.bg : undefined}
     >
-      <Stack horizontal justifyContent="flex-end" paddingHorizontal={20} paddingTop={12}>
-        <StyledPressable onPress={finish}>
-          <Text variant="bodySmall" color={C.textSecondary} fontWeight="600">Skip</Text>
-        </StyledPressable>
-      </Stack>
-
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -226,41 +256,46 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={handleScrollEnd}
         style={{ flex: 1 }}
       >
-        {SLIDES.map((slide) => (
-          <Stack
-            key={slide.title}
-            alignItems="center" justifyContent="center"
-            paddingHorizontal={32} style={{ width }}
-          >
-            <Scene scene={slide.scene} />
-            <Text variant="header" color={C.textPrimary} fontWeight="800" textAlign="center"
-              style={{ marginBottom: 12, marginHorizontal: 24, fontSize: 26, lineHeight: 34 }}
-            >
-              {slide.title}
-            </Text>
-            <Text variant="body" color={C.textSecondary} textAlign="center" style={{ lineHeight: 24, maxWidth: 330 }}>
-              {slide.desc}
-            </Text>
-          </Stack>
+        {SLIDES.map((s) => (
+          <View key={s.tag} style={{ width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+            <Scene scene={s.scene} />
+            <View style={{ marginTop: 28, marginBottom: 16 }}>
+              <Pill label={s.tag} color={s.accent} filled tag />
+            </View>
+            <RNText style={{ fontFamily: FONT.heading, fontSize: 30, lineHeight: 36, letterSpacing: -0.8, textAlign: 'center', color: A.text }}>
+              {s.title[0]}{'\n'}
+              <RNText style={{ color: s.accent }}>{s.title[1]}</RNText>
+            </RNText>
+            <RNText style={{ fontFamily: FONT.body, fontSize: 16, lineHeight: 25, textAlign: 'center', color: A.muted, marginTop: 14, maxWidth: 340 }}>
+              {s.body}
+            </RNText>
+          </View>
         ))}
       </ScrollView>
 
-      <Stack paddingHorizontal={24} paddingBottom={Platform.OS === 'ios' ? 20 : 28} gap={24}>
-        {/* Dots */}
-        <Stack horizontal alignItems="center" justifyContent="center" gap={7}>
-          {SLIDES.map((slide, i) => (
-            <Stack
-              key={slide.title}
-              width={i === index ? 22 : 7} height={7} borderRadius={4}
-              backgroundColor={i === index ? C.primary : C.bgMuted}
-              style={i === index
-                ? { shadowColor: C.primary, shadowOpacity: 0.6, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }
-                : undefined}
-            />
+      <View style={{ paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 12 : 24, gap: 20 }}>
+        {/* Progress dots — the active one stretches */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 7 }}>
+          {SLIDES.map((s, i) => (
+            <View key={s.tag} style={{
+              width: i === index ? 22 : 7, height: 7, borderRadius: 4,
+              backgroundColor: i === index ? TEAL : A.border,
+            }} />
           ))}
-        </Stack>
-        <GradientButton label={isLast ? 'Get started' : 'Next'} onPress={goNext} />
-      </Stack>
+        </View>
+        <AuthButton
+          label={isLast ? 'Start Translating →' : 'Next →'}
+          color={isLast ? PURPLE : TEAL}
+          onPress={goNext}
+        />
+        {/* Same height on every slide so the button doesn't jump */}
+        <TouchableOpacity onPress={finish} disabled={isLast} hitSlop={8}
+          style={{ alignSelf: 'center', height: 22, opacity: isLast ? 0 : 1 }}
+          accessibilityRole="button" accessibilityLabel="Skip intro"
+        >
+          <RNText style={{ fontFamily: FONT.medium, fontSize: 15, color: A.muted }}>Skip intro</RNText>
+        </TouchableOpacity>
+      </View>
     </StyledPage>
   )
 }

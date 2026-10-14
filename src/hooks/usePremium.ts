@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { PurchasesPackage } from 'react-native-purchases'
+import Purchases, { type CustomerInfo, type PurchasesPackage } from 'react-native-purchases'
 import { toastService, loaderService } from 'fluent-styles'
 import { usePremiumStore, useAuthStore } from '../stores'
 import {
@@ -8,10 +8,22 @@ import {
   resetPremiumForTesting,
   openWebSubscribe as serviceOpenWebSubscribe,
   fetchWebSubscriptionStatus,
-  getPlanPackages, purchasePlanPackage, subscribeToEntitlementUpdates,
+  getPlanPackages, purchasePlanPackage, subscribeToEntitlementUpdates, initializeRevenueCat,
   type PlanId,
 } from '../services/premiumService'
-import { ENABLE_REVENUECAT } from '../constants/premium'
+import { ENABLE_REVENUECAT, PREMIUM_ENTITLEMENT_ID } from '../constants/premium'
+
+/** Single source of truth for Pro: the RevenueCat "premium" entitlement. No backend call. */
+export async function isPremium(): Promise<boolean> {
+  if (!ENABLE_REVENUECAT) return false
+  try {
+    await initializeRevenueCat()
+    const info: CustomerInfo = await Purchases.getCustomerInfo()
+    return typeof info.entitlements.active[PREMIUM_ENTITLEMENT_ID] !== 'undefined'
+  } catch {
+    return false
+  }
+}
 
 export function usePremium() {
   const { isPremium, plan, hydrated, setEntitlement } = usePremiumStore()
@@ -22,29 +34,19 @@ export function usePremium() {
     lifetimePrice: null as string | null,
   })
 
-  // Pro comes from Apple (RevenueCat) or a Stripe web subscription (backend), so an inactive
-  // RevenueCat entitlement only downgrades the user once the backend agrees
-  const webIsPro = useCallback(async () => {
-    if (!accessToken) return false
-    try { return (await fetchWebSubscriptionStatus()).is_pro } catch { return false }
-  }, [accessToken])
-
+  // Pro status comes from RevenueCat only
   const refresh = useCallback(async () => {
     if (!ENABLE_REVENUECAT) return { isActive: false, plan: null, expiresAt: null, purchasedAt: null } as any
     const info = await getEntitlement()
-    if (info.isActive) setEntitlement(true, info.plan)
-    else setEntitlement(await webIsPro(), null)
+    setEntitlement(info.isActive, info.plan)
     return info
-  }, [setEntitlement, webIsPro])
+  }, [setEntitlement])
 
   // Renewals, expiries and restores pushed by RevenueCat
   useEffect(() => {
     if (!ENABLE_REVENUECAT) return
-    return subscribeToEntitlementUpdates((info) => {
-      if (info.isActive) setEntitlement(true, info.plan)
-      else webIsPro().then((pro) => setEntitlement(pro, null))
-    })
-  }, [setEntitlement, webIsPro])
+    return subscribeToEntitlementUpdates((info) => setEntitlement(info.isActive, info.plan))
+  }, [setEntitlement])
 
   useEffect(() => {
     if (!hydrated && ENABLE_REVENUECAT) refresh().catch(() => {})
@@ -122,7 +124,10 @@ export function usePremium() {
   }, [refresh])
 
   /** Pulls Pro status from the backend after web checkout. Resolves true once the user is Pro. */
+  // With RevenueCat on, this just re-reads RevenueCat (callers refresh on resume / focus);
+  // the backend's web-subscription status only matters in the Stripe-only fallback
   const refreshFromWeb = useCallback(async (): Promise<boolean> => {
+    if (ENABLE_REVENUECAT) return (await refresh()).isActive
     if (!accessToken) return false
     try {
       const status = await fetchWebSubscriptionStatus()
@@ -134,7 +139,7 @@ export function usePremium() {
       if (__DEV__) console.log('[Premium] refreshFromWeb failed:', err?.message)
       return false
     }
-  }, [accessToken, setEntitlement])
+  }, [accessToken, setEntitlement, refresh])
 
   /** Opens Stripe checkout in the browser. Resolves false if it couldn't be opened. */
   const openWebSubscribe = useCallback(async (

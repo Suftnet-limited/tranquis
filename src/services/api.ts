@@ -321,13 +321,3 @@ export const phrasebookService = {
   delete: (id: string) => api.delete(`/api/v1/phrasebook/${id}`),
   categories: () => api.get<string[]>('/api/v1/phrasebook/categories'),
 }
-
-// ─── Quota ────────────────────────────────────────────────────────────────────
-export const quotaService = {
-  status: () => api.get<{
-    used:       number
-    limit:      number
-    unlimited:  boolean
-    remaining?: number
-  }>('/api/v1/translate/quota'),
-}

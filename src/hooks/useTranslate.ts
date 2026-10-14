@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react'
 import { toastService } from 'fluent-styles'
-import { router } from 'expo-router'
 import { translateService, type TranslationResult } from '../services/api'
 import { useTranslatorStore } from '../stores'
+import { ensureCanTranslate, recordTranslation } from '../utils/dailyLimit'
 
 export function useTranslate() {
   const { sourceLang, targetLang, tone } = useTranslatorStore()
@@ -12,6 +12,7 @@ export function useTranslate() {
 
   const translate = useCallback(async (text: string) => {
     if (!text.trim()) return
+    if (!(await ensureCanTranslate())) return
     setLoading(true)
     setError(null)
     try {
@@ -21,17 +22,12 @@ export function useTranslate() {
         target_lang: targetLang,
         tone,
       })
+      await recordTranslation()
       setResult(data)
       return data
     } catch (err: any) {
       const msg = err?.message || 'Translation failed'
       setError(msg)
-      if (err?.code === 'quota_exceeded') {
-        // Free daily limit reached: explain and offer Pro
-        toastService.info('Daily limit reached', msg)
-        router.push('/premium')
-        return
-      }
       toastService.error('Translation failed', msg)
     } finally {
       setLoading(false)
@@ -39,6 +35,7 @@ export function useTranslate() {
   }, [sourceLang, targetLang, tone])
 
   const translateImage = useCallback(async (base64: string, mimeType: string) => {
+    if (!(await ensureCanTranslate())) return
     setLoading(true)
     setError(null)
     try {
@@ -48,17 +45,12 @@ export function useTranslate() {
         target_lang:  targetLang,
         tone,
       })
+      await recordTranslation()
       setResult(data)
       return data
     } catch (err: any) {
       const msg = err?.message || 'Image translation failed'
       setError(msg)
-      if (err?.code === 'quota_exceeded') {
-        // Free daily limit reached: explain and offer Pro
-        toastService.info('Daily limit reached', msg)
-        router.push('/premium')
-        return
-      }
       toastService.error('Image translation failed', msg)
     } finally {
       setLoading(false)

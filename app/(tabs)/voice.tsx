@@ -9,6 +9,7 @@ import { Text } from '../../src/components/Text'
 import { useColors, useIsDark, getLang } from '../../src/constants'
 import { useTranslatorStore } from '../../src/stores'
 import { translateService, type TranslationResult } from '../../src/services/api'
+import { ensureCanTranslate, recordTranslation } from '../../src/utils/dailyLimit'
 import { useTTS } from '../../src/hooks'
 import { MicIcon, StopIcon, StarIcon, SpeakerIcon, ChevronLeftIcon } from '../../src/icons'
 import { goBack } from '../../src/utils'
@@ -91,6 +92,8 @@ export default function VoiceScreen() {
 
   const handleStart = async () => {
     if (processing) return
+    // Check the free daily limit before recording, not after the user has spoken
+    if (!(await ensureCanTranslate())) return
     try {
       const perm = await Audio.requestPermissionsAsync()
       if (!perm.granted) { toastService.error('Microphone', 'Microphone access denied'); return }
@@ -127,6 +130,7 @@ export default function VoiceScreen() {
       const translated = await translateService.translateText({
         text: transcribed.text, source_lang: sourceLang, target_lang: targetLang, tone, type: 'voice',
       })
+      await recordTranslation()
       setTranscript((prev) => [...prev, {
         id:          translated.id ?? Date.now().toString(),
         speaker:     'you',

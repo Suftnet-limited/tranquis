@@ -194,9 +194,13 @@ export const authService = {
     ),
 
   // Sets a new password from the email alone and returns tokens (Tranquis accounts only)
-  resetPassword: (email: string, newPassword: string) =>
-    api.post<{ access_token: string; refresh_token: string; token_type: string }>(
-      '/api/v1/auth/reset-password-instant', { email, new_password: newPassword }
+  // Two-step reset: email a 6-digit code, then confirm it with the new password
+  requestResetCode: (email: string) =>
+    api.post<{ success: boolean }>('/api/v1/tranquis/auth/reset-password/request', { email }),
+
+  confirmResetCode: (email: string, code: string, newPassword: string) =>
+    api.post<{ success: boolean }>(
+      '/api/v1/tranquis/auth/reset-password/confirm', { email, code, new_password: newPassword }
     ),
 
   me: async (): Promise<MeResponse> => {

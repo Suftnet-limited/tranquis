@@ -23,8 +23,6 @@ type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 const FEATURES = [
   'Unlimited text, voice & camera translations',
   'Live voice interpreter (two-way, real-time)',
-  'Save unlimited phrases to your phrasebook',
-  'Priority support',
   'Context & tone aware translations',
   'Unlimited phrasebook saves',
 ]

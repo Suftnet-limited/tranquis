@@ -39,18 +39,34 @@ export function useAuth() {
     }
   }, [setTokens, setUser])
 
-  // Returns true on success; the caller decides whether to navigate
-  const resetPassword = useCallback(async (email: string, newPassword: string) => {
+  // Step 1 of the reset: email a code. Resolves true once the request went through
+  // (the backend answers the same whether or not the email has an account).
+  const requestResetCode = useCallback(async (email: string) => {
     setLoading(true)
     try {
-      const data = await authService.resetPassword(email, newPassword)
+      await authService.requestResetCode(email)
+      return true
+    } catch (err: any) {
+      toastService.error('Could not send code', err?.message || 'Please try again')
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Step 2: confirm the code, then sign in with the new password. Returns null on success,
+  // or the error to show next to the code field. The caller decides whether to navigate.
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    setLoading(true)
+    try {
+      await authService.confirmResetCode(email, code, newPassword)
+      const data = await authService.login(email, newPassword)
       setTokens(data.access_token, data.refresh_token)
       const me = await authService.me()
       setUser(me as any)
-      return true
+      return null
     } catch (err: any) {
-      toastService.error('Reset failed', err?.message || 'Could not reset your password')
-      return false
+      return err?.message || 'Could not reset your password'
     } finally {
       setLoading(false)
     }
@@ -62,5 +78,5 @@ export function useAuth() {
     router.replace('/auth/login')
   }, [storeLogout])
 
-  return { login, register, resetPassword, logout, loading }
+  return { login, register, requestResetCode, resetPassword, logout, loading }
 }

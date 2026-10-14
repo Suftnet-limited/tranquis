@@ -10,21 +10,18 @@ import { AuthButton, FONT, PURPLE, TEAL, useAuthColors } from '../src/components
 
 const SLIDES = [
   {
-    tag:     'WELCOME TO TRANQUIS',
     title:   ['Speak every language,', 'anywhere'],
     body:    'Real-time translation for text, voice, and camera — in 37 languages. Your words, understood everywhere.',
     accent:  TEAL,
     scene:   'globe' as const,
   },
   {
-    tag:     'LIVE INTERPRETER',
     title:   ['Two-way voice,', 'in real time'],
     body:    'Hold a natural conversation across any language barrier. Tranquis listens, translates, and speaks — instantly, for both sides.',
     accent:  TEAL,
     scene:   'voice' as const,
   },
   {
-    tag:     'CAMERA TRANSLATE',
     title:   ['Point, shoot,', 'understood'],
     body:    'Aim your camera at any text — a menu, a sign, a document — and see the translation overlaid instantly.',
     accent:  PURPLE,
@@ -48,14 +45,14 @@ function useLoop(duration: number, delay = 0) {
   return v
 }
 
-function Pill({ label, color, filled, tag }: { label: string; color: string; filled?: boolean; tag?: boolean }) {
+function Pill({ label, color, filled }: { label: string; color: string; filled?: boolean }) {
   const A = useAuthColors()
   return (
     <View style={{
-      paddingHorizontal: tag ? 14 : 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
+      paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
       borderColor: `${color}40`, backgroundColor: filled ? `${color}14` : A.bg,
     }}>
-      <RNText style={{ fontFamily: FONT.semibold, fontSize: tag ? 12 : 13, letterSpacing: tag ? 1.6 : 0, color }}>{label}</RNText>
+      <RNText style={{ fontFamily: FONT.semibold, fontSize: 13, color }}>{label}</RNText>
     </View>
   )
 }
@@ -257,12 +254,9 @@ export default function OnboardingScreen() {
         style={{ flex: 1 }}
       >
         {SLIDES.map((s) => (
-          <View key={s.tag} style={{ width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+          <View key={s.scene} style={{ width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
             <Scene scene={s.scene} />
-            <View style={{ marginTop: 28, marginBottom: 16 }}>
-              <Pill label={s.tag} color={s.accent} filled tag />
-            </View>
-            <RNText style={{ fontFamily: FONT.heading, fontSize: 30, lineHeight: 36, letterSpacing: -0.8, textAlign: 'center', color: A.text }}>
+            <RNText style={{ fontFamily: FONT.heading, fontSize: 30, lineHeight: 36, letterSpacing: -0.8, textAlign: 'center', color: A.text, marginTop: 32 }}>
               {s.title[0]}{'\n'}
               <RNText style={{ color: s.accent }}>{s.title[1]}</RNText>
             </RNText>
@@ -277,7 +271,7 @@ export default function OnboardingScreen() {
         {/* Progress dots — the active one stretches */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 7 }}>
           {SLIDES.map((s, i) => (
-            <View key={s.tag} style={{
+            <View key={s.scene} style={{
               width: i === index ? 22 : 7, height: 7, borderRadius: 4,
               backgroundColor: i === index ? TEAL : A.border,
             }} />

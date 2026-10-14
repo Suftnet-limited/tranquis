@@ -22,7 +22,7 @@ const SECTIONS = [
   },
   {
     title: 'Tranquis Pro subscriptions',
-    body: 'Tranquis Pro is an auto-renewing subscription, billed monthly or yearly through your Apple ID or Google account. A free trial, where offered, converts to a paid subscription unless you cancel at least 24 hours before it ends. Subscriptions renew automatically unless auto-renew is turned off at least 24 hours before the end of the current period. You can manage or cancel your subscription in your device account settings. Refunds are handled by Apple or Google under their policies.',
+    body: 'Tranquis Pro is an auto-renewing subscription, billed in advance weekly, monthly, every 3 months or yearly depending on the plan you choose. Payment is processed by Stripe on the web, or by Apple or Google where purchased in the app store. The Monthly plan includes a 7-day free trial, which converts to a paid subscription unless you cancel before it ends. Subscriptions renew automatically at the then-current price unless cancelled at least 24 hours before the end of the current period. App Store subscriptions are managed or cancelled in your device account settings; web subscriptions are cancelled by emailing support. Cancellation takes effect at the end of the current period, and no partial refunds are given for unused time.',
   },
   {
     title: 'Acceptable use',

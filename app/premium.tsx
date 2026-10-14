@@ -7,13 +7,14 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native'
-import { AppState } from 'react-native'
+import { AppState, Linking } from 'react-native'
 import { router } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { StyledPage, Stack } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { useColors, useIsDark } from '../src/constants'
 import { usePremium } from '../src/hooks'
+import { PRIVACY_URL, TERMS_URL } from '../src/constants/legal'
 
 type Plan = 'annual' | 'monthly' | 'quarterly' | 'weekly'
 
@@ -266,10 +267,11 @@ export default function PremiumScreen() {
           </TouchableOpacity>
 
           <Text variant="caption" color={C.textSecondary} textAlign="center" style={{ marginTop: 10, lineHeight: 18 }}>
-            {selected === 'monthly'   ? 'Then £4.99/month. Cancel in Settings anytime before renewal.'
-              : selected === 'annual'   ? 'Then £39.99/year. Cancel in Settings anytime before renewal.'
-              : selected === 'quarterly' ? '£9.99 every 3 months. Cancel anytime.'
-              : '£1.99/week. Cancel anytime.'}
+            {selected === 'monthly'   ? '7-day free trial, then £4.99/month.'
+              : selected === 'annual'   ? '£39.99/year.'
+              : selected === 'quarterly' ? '£9.99 every 3 months.'
+              : '£1.99/week.'}
+            {' '}Renews automatically unless cancelled at least 24 hours before the end of the current period. Cancel anytime by contacting support.
           </Text>
 
           {/* Stripe trust note */}
@@ -277,6 +279,17 @@ export default function PremiumScreen() {
             <Feather name="lock" size={13} color={C.textMuted} />
             <Text variant="caption" color={C.textMuted} fontWeight="500">
               Secure payment via Stripe
+            </Text>
+          </Stack>
+
+          {/* Required by App Store guideline 3.1.2 — functional links to the privacy policy and terms (EULA) */}
+          <Stack horizontal alignItems="center" justifyContent="center" gap={8} marginTop={12}>
+            <Text variant="caption" color={TEAL} fontWeight="600" onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+            <Text variant="caption" color={C.textMuted}>•</Text>
+            <Text variant="caption" color={TEAL} fontWeight="600" onPress={() => Linking.openURL(TERMS_URL)}>
+              Terms of Use
             </Text>
           </Stack>
 

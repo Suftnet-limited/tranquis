@@ -1,9 +1,10 @@
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, Linking } from 'react-native'
 import { StyledPage, StyledScrollView, Stack, StyledCard } from 'fluent-styles'
 import { Text } from '../src/components/Text'
 import { ScreenHeader } from '../src/components/ScreenHeader'
 import { useColors, useIsDark } from '../src/constants'
+import { PRIVACY_URL } from '../src/constants/legal'
 import { goBack } from '../src/utils'
 
 const SECTIONS = [
@@ -21,7 +22,7 @@ const SECTIONS = [
   },
   {
     title: 'Third parties',
-    body: 'We use OpenAI for translations, RevenueCat for subscription management, Sentry for crash reports (which never include what you translate), and Expo/Apple/Google for app delivery. We do not sell your data to advertisers.',
+    body: 'We use OpenAI for translations, Stripe for web subscription payments, RevenueCat for in-app subscription management, Sentry for crash reports (which never include what you translate), Render for hosting, and Expo/Apple/Google for app delivery. We do not sell your data to advertisers.',
   },
   {
     title: 'Security',
@@ -58,6 +59,12 @@ export default function PrivacyScreen() {
             </StyledCard>
           ))}
         </Stack>
+        <Text variant="caption" color={C.textMuted} textAlign="center" style={{ marginTop: 18 }}>
+          Also available at{' '}
+          <Text variant="caption" color={C.primary} fontWeight="600" onPress={() => Linking.openURL(PRIVACY_URL)}>
+            {PRIVACY_URL.replace('https://', '')}
+          </Text>
+        </Text>
       </StyledScrollView>
     </StyledPage>
   )

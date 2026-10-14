@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { toastService } from 'fluent-styles'
+import { router } from 'expo-router'
 import { translateService, type TranslationResult } from '../services/api'
 import { useTranslatorStore } from '../stores'
 
@@ -25,6 +26,12 @@ export function useTranslate() {
     } catch (err: any) {
       const msg = err?.message || 'Translation failed'
       setError(msg)
+      if (err?.code === 'quota_exceeded') {
+        // Free daily limit reached: explain and offer Pro
+        toastService.info('Daily limit reached', msg)
+        router.push('/premium')
+        return
+      }
       toastService.error('Translation failed', msg)
     } finally {
       setLoading(false)
@@ -46,6 +53,12 @@ export function useTranslate() {
     } catch (err: any) {
       const msg = err?.message || 'Image translation failed'
       setError(msg)
+      if (err?.code === 'quota_exceeded') {
+        // Free daily limit reached: explain and offer Pro
+        toastService.info('Daily limit reached', msg)
+        router.push('/premium')
+        return
+      }
       toastService.error('Image translation failed', msg)
     } finally {
       setLoading(false)

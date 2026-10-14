@@ -25,6 +25,14 @@ async function fetchWithTimeout(
   }
 }
 
+// FastAPI's detail is either a string or an object such as { code, message } (quota_exceeded);
+// keep the code so callers can react to it
+function apiError(body: any, fallback: string, status: number): Error & { status: number; code?: string } {
+  const detail = body?.detail
+  const message = typeof detail === 'string' ? detail : detail?.message || fallback
+  return Object.assign(new Error(message), { status, code: typeof detail === 'object' ? detail?.code : undefined })
+}
+
 class ApiClient {
   private base: string
   private refreshPromise: Promise<boolean> | null = null
@@ -106,13 +114,13 @@ class ApiClient {
       })
       if (!retry.ok) {
         const err = await retry.json().catch(() => ({}))
-        throw new Error((err as any)?.detail || `POST ${path} → ${retry.status}`)
+        throw apiError(err, `POST ${path} → ${retry.status}`, retry.status)
       }
       return retry.json()
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error((err as any)?.detail || `POST ${path} → ${res.status}`)
+      throw apiError(err, `POST ${path} → ${res.status}`, res.status)
     }
     return res.json()
   }
@@ -135,13 +143,13 @@ class ApiClient {
       })
       if (!retry.ok) {
         const err = await retry.json().catch(() => ({}))
-        throw new Error((err as any)?.detail || `POST ${path} → ${retry.status}`)
+        throw apiError(err, `POST ${path} → ${retry.status}`, retry.status)
       }
       return retry.json()
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error((err as any)?.detail || `POST ${path} → ${res.status}`)
+      throw apiError(err, `POST ${path} → ${res.status}`, res.status)
     }
     return res.json()
   }
@@ -187,7 +195,7 @@ export const authService = {
     ),
 
   // Backend expects { name, email, password } — returns tokens directly.
-  // app_source marks the account as Tranquis, which allows the instant reset below.
+  // app_source marks the account as Tranquis (password reset codes, App Store Pro).
   register: (email: string, password: string, name: string) =>
     api.post<{ access_token: string; refresh_token: string; token_type: string }>(
       '/api/v1/auth/register', { email, password, name, app_source: 'tranquis' }
@@ -316,9 +324,9 @@ export const phrasebookService = {
 // ─── Quota ────────────────────────────────────────────────────────────────────
 export const quotaService = {
   status: () => api.get<{
-    is_pro:             boolean
-    daily_used:         number
-    daily_limit:        number
-    resets_at:          string
-  }>('/api/v1/quota/status'),
+    used:       number
+    limit:      number
+    unlimited:  boolean
+    remaining?: number
+  }>('/api/v1/translate/quota'),
 }
